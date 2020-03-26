@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>IFF by DrSnuggles</title>
+  <link href="css/style.css" type="text/css" rel="stylesheet"/>
+  <script src="js/dnd.js"></script> <!-- drag n drop your own files -->
+  <script src="js/iff.js"></script> <!-- general IFF parser -->
+    <script src="js/8svx.js"></script>
+    <script src="js/ilbm.js"></script>
+</head>
+<body>
+  <!-- top menu -->
+  <select id="testselect">
+    <optgroup label="8SVX">
+      <option value="tst/8svx/terminator_ADPCM2">Terminator ADPCM2</option>
+      <option value="tst/8svx/terminator">Terminator</option>
+      <option value="tst/8svx/terminator_FDC">Terminator FDC</option>
+      <option value="tst/8svx/terminator_EDC">Terminator EDC</option>
+      <option value="tst/8svx/terminator_ADPCM3">Terminator ADPCM3</option>
+      <option value="tst/8svx/sound3">Sound3</option>
+      <option value="tst/8svx/sound3_FDC">Sound3 FDC</option>
+      <option value="tst/8svx/sound3_EDC">Sound3 EDC</option>
+      <option value="tst/8svx/sound3_ADPCM2">Sound3 ADPCM2</option>
+      <option value="tst/8svx/sound3_ADPCM3">Sound3 ADPCM3</option>
+    </optgroup>
+    <optgroup label="ILBM">
+      <option value="tst/ilbm/venus">Venus</option>
+      <option value="tst/ilbm/marbles">Marbles</option>
+    </optgroup>
+  </select>
+  <button onclick="IFF.load(testselect.value)">Load</button>
+  <div id="info"></div>
+
+  <!-- canvas for ILBM -->
+  <canvas id="ILBMcanvas"></canvas>
+
+</body>
+</html>

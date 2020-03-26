@@ -1,0 +1,43 @@
+:root {
+  --bgCol: #05A;
+  --mainCol: #FFF;
+  --darkCol: #002;
+  --actCol: #F80;
+}
+
+body {
+  margin: 0;
+  background-color: var(--bgCol);
+  color: var(--mainCol);
+}
+select {
+  color: var(--bgCol);
+}
+option {
+  color: var(--bgCol);
+}
+optgroup {
+  color: var(--actCol);
+}
+button {
+  border: 1px solid var(--actCol);
+  border-radius: 50%;
+  background-color: var(--bgCol);
+  color: var(--mainCol);
+}
+button:focus{
+  outline: 0;
+}
+
+#ILBMcanvas {
+  position: absolute;
+  pointer-events: none;
+  top: 10vh;
+  left: 0;
+}
+#info {
+  position: absolute;
+  top: 0;
+  right: 0;
+  text-align: right;
+}
