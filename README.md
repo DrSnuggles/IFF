@@ -2,7 +2,9 @@
 Interchange File Format (IFF), is a generic container file format originally introduced by the Electronic Arts company in 1985 (in cooperation with Commodore) in order to facilitate transfer of data between software produced by different companies.
 
 ## Why
-I found an ILBM to canvas renderer but nothing for 8SVX. I started working on Bloodwych HTML version and maybe i use original data instead of converted data.
+I started working on Bloodwych HTML version and maybe i use original data instead of converted data.
+
+I found an ILBM to canvas renderer but nothing similar for 8SVX. There is a 8SVX import in BassoonTracker.
 
 That's why i started this repo. I also included support for official and unofficial 8SVX packers.
 
