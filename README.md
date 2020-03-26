@@ -8,6 +8,7 @@ That's why i started this repo. I also included support for official and unoffic
 
 ## Found repos
 There is a general node IFF parser done by Raphael Schweiker. https://github.com/sabberworm/node-iff-parser
+
 This also offers ILBM and SMUS renderers.
 
 ## Chunks
@@ -30,5 +31,7 @@ For infos see https://wiki.amigaos.net/wiki/8SVX_IFF_8-Bit_Sampled_Voice
 
 ## Copyright / License
 IFF: DrSnuggles - Public Domain
+
 8SVX: DrSnuggles - Public Domain
+
 ILBM: Parts from Matthias Wiesmann
