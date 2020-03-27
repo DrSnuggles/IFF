@@ -11,7 +11,7 @@
 </head>
 <body>
   <!-- top menu -->
-  <select id="testselect">
+  <select id="testselect" onchange="IFFLoad(this.value)">
     <optgroup label="8SVX">
       <option value="tst/8svx/terminator">Terminator</option>
       <option value="tst/8svx/terminator_FDC">Terminator FDC</option>
@@ -28,12 +28,36 @@
       <option value="tst/ilbm/venus">Venus</option>
       <option value="tst/ilbm/marbles">Marbles</option>
     </optgroup>
+    <optgroup label="ILBM DP1">
+      <option value="tst/ilbm/DP1/allfonts">allfonts</option>
+      <option value="tst/ilbm/DP1/fantasy scene">fantasy scene</option>
+      <option value="tst/ilbm/DP1/Graph">Graph</option>
+      <option value="tst/ilbm/DP1/guess">guess</option>
+      <option value="tst/ilbm/DP1/KingTut">KingTut</option>
+      <option value="tst/ilbm/DP1/PaintCan">PaintCan</option>
+      <option value="tst/ilbm/DP1/Patterns">Patterns</option>
+      <option value="tst/ilbm/DP1/StarFlight">StarFlight</option>
+      <option value="tst/ilbm/DP1/Venus">Venus</option>
+      <option value="tst/ilbm/DP1/Waterfall">Waterfall</option>
+      <option value="tst/ilbm/DP1/xmas scene">xmas scene</option>
+    </optgroup>
   </select>
-  <button onclick="IFF.load(testselect.value)">Load</button>
-  <div id="info"></div>
+  <button onclick="IFFLoad(testselect.value)">Load</button>
+  <div id="info">Drop your own files here<br/></div>
 
   <!-- canvas for ILBM -->
   <canvas id="ILBMcanvas"></canvas>
+
+  <!-- how to use -->
+  <script>
+    function IFFLoad(url){
+      IFF.load(url, ILBMcanvas);
+    }
+    function IFFParse(buf) {
+      // used by DND
+      IFF.parseIFF(buf, ILBMcanvas);
+    }
+  </script>
 
 </body>
 </html>

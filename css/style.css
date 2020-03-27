@@ -12,6 +12,7 @@ body {
 }
 select {
   color: var(--bgCol);
+  cursor: pointer;
 }
 option {
   color: var(--bgCol);
@@ -21,9 +22,9 @@ optgroup {
 }
 button {
   border: 1px solid var(--actCol);
-  border-radius: 50%;
-  background-color: var(--bgCol);
-  color: var(--mainCol);
+  background-color: var(--mainCol);
+  color: var(--bgCol);
+  cursor: pointer;
 }
 button:focus{
   outline: 0;
@@ -32,12 +33,24 @@ button:focus{
 #ILBMcanvas {
   position: absolute;
   pointer-events: none;
-  top: 10vh;
   left: 0;
+  bottom: 0;
+  height: 75vw;
+  width: 100vw;
+  background-color: black;
 }
+  @media (min-width:calc(4/3*90vh)) {
+    #ILBMcanvas {
+      height: 90vh;
+      width: calc(4/3*90vh);
+    }
+  }
 #info {
   position: absolute;
   top: 0;
   right: 0;
   text-align: right;
+  z-index: -1;
+  height: 100vh;
+  overflow: scroll;
 }

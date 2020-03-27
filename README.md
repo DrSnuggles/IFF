@@ -32,8 +32,4 @@ For infos see https://wiki.amigaos.net/wiki/8SVX_IFF_8-Bit_Sampled_Voice
     - ADPCM3
 
 ## Copyright / License
-IFF: DrSnuggles - Public Domain
-
-8SVX: DrSnuggles - Public Domain
-
-ILBM: Parts from Matthias Wiesmann
+Multiple, see single files for information.

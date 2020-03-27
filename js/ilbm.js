@@ -66,15 +66,15 @@ IFF = (function (my) {
           cmap.push( [(sbuf8[idx++]), (sbuf8[idx+++i]), (sbuf8[idx+++i]), 255] );
         }
       }
-      my.log(cmap);
+      //my.log(cmap);
       // check if we have the right amount of cols for #bitplanes
-      my.log(Math.pow(2, nPlanes) +" "+ cmap.length);
+      my.log("2^"+nPlanes+"="+Math.pow(2, nPlanes) +" ?= "+ cmap.length);
       if (Math.pow(2, nPlanes) !== cmap.length) {
         my.log("num colors in cmap do not match bitplanes");
       }
 
       var pixBuf = bitPlaneToPixBuffer(data, w, h, nPlanes, masking);
-      my.log(pixBuf);
+      //my.log(pixBuf);
       //showILBM(pixBuf, w*xAspect, h*yAspect, document.getElementById("ILBMcanvas"));
       showILBM(pixBuf, w, h, document.getElementById("ILBMcanvas"));
 

@@ -18,6 +18,8 @@ var IFF = (function (my) {
   //
   function log(out) {
     if (debug) console.log("IFF:", out);
+    var dbg_DOM = document.getElementById("info");
+    if (dbg_DOM) dbg_DOM.innerHTML += out +"<br/>";
   }
   function load(url) {
     log("load: "+ url);
@@ -65,7 +67,7 @@ var IFF = (function (my) {
       }
       data.push(sbuf8[idx+i]);
     }
-    log(data);
+    //log(data);
 
     //
     // detect TYPE

@@ -155,7 +155,8 @@ IFF = (function (my) {
   function play8SVX(buf, srcRate) {
     var ctx = new AudioContext({sampleRate: srcRate});
     var destRate = ctx.sampleRate;
-    my.log("srcRate: "+ srcRate + " destRate: "+ destRate);
+    my.log("srcRate: "+ srcRate);
+    my.log("destRate: "+ destRate);
     if (srcRate !== destRate) {
       // Edge for example cannot handle unusual sample rates
       buf = resample(buf, srcRate, destRate);
@@ -180,8 +181,30 @@ IFF = (function (my) {
     node.connect(ctx.destination);
   }
   function resample(buf, srcRate, destRate) {
-    // ToDo: linear, spline
-    return buf;
+    // i only take care of upsampling and i do not even interpolate
+    var ret = [];
+    var fac = destRate/srcRate;
+    var fac_int = Math.floor(destRate/srcRate);
+    var fac_dec = fac - fac_int;
+    var dec = 0;
+    my.log("wanted fac: "+ fac);
+
+    // loop
+    for (let i = 0; i < buf.length; i++) { // loop this before end
+      for (let j = 0; j < fac_int; j++) {
+        // this takes care of int part of factor
+        ret.push(buf[i]);
+      }
+      dec += fac_dec;
+      if (dec >= 1) {
+        // decimal part
+        ret.push(buf[i]);
+        dec -= 1;
+      }
+    }
+
+    my.log("result fac: "+ ret.length/buf.length);
+    return ret;
   }
 
   //
