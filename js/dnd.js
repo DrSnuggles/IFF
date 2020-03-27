@@ -21,7 +21,7 @@ function handleDrop(e) {
   var reader = new FileReader();
   var filename = file.name;
   reader.onload = function(ev) {
-    parseBuffer(ev.target.result);
+    IFF.parseIFF(ev.target.result);
   };
   /*
   reader.onprogress = function(e) {

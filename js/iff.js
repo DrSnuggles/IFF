@@ -11,7 +11,7 @@ var IFF = (function (my) {
   //
   // Init
   //
-  var debug = false;
+  var debug = true;
 
   //
   // Private
@@ -107,6 +107,7 @@ var IFF = (function (my) {
   // Public
   //
   my.load = load;
+  my.parseIFF = parseIFF;
   my.log = log;
 
   //
