@@ -133,7 +133,7 @@ IFF = (function (my) {
       }
     }
 
-    my.log(f);
+    console.log(f);
     play8SVX(f.data, f.vhdr.samplesPerSec);
   }
   function unpack_Delta(buf, typ) {

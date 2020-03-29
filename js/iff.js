@@ -11,7 +11,7 @@ var IFF = (function (my) {
   //
   // Init
   //
-  var debug = true;
+  var debug = false;
   var size;
 
   //
