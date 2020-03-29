@@ -12,6 +12,7 @@ var IFF = (function (my) {
   // Init
   //
   var debug = true;
+  var size;
 
   //
   // Private
@@ -21,85 +22,96 @@ var IFF = (function (my) {
     var dbg_DOM = document.getElementById("info");
     if (dbg_DOM) dbg_DOM.innerHTML += out +"<br/>";
   }
-  function load(url) {
+  function load(url, canv) {
     log("load: "+ url);
     var xhr = new XMLHttpRequest();
     xhr.open("GET", url, true);
     xhr.responseType = "arraybuffer";
     xhr.onload = function() {
       log("File loaded");
-      parseIFF(xhr.response);
+      parseIFF(xhr.response, canv);
     }
     xhr.send();
   }
-  function parseIFF(buf) {
-    var sbuf8 = new Uint8Array(buf);
-    var str = getAsString(sbuf8);
-    var idx, size;
+  function parseIFF(buf, canv) {
+    var f = {}; // form object, should be better group object....
+    //f.i8 = new Int8Array(buf);
+    f.u8 = new Uint8Array(buf);
+    f.str = getAsString(f.u8);
 
-    // detect IFF
-    if (str.indexOf("FORM") !== 0) {
-      log("This is not an IFF file")
+    // detect EA IFF 85 group identifier
+    var group = f.str.substr(0, 4);
+    if (["FORM", "CAT ", "LIST", "PROP"].indexOf(group) === -1) {
+      log("This is not an IFF file");
       return false;
     }
-    idx = 4;
-
-    size = (sbuf8[idx++]<<24) + (sbuf8[idx++]<<16) + (sbuf8[idx++]<<8) + (sbuf8[idx++]);
-    log("FORM size = "+ size);
-
-    // detect BODY
-    idx = str.indexOf("BODY") + 4;
-    if (idx < 4) {
-      log("no BODY chunk found");
+    f.idx = 4;
+    log(group + " chunk size = "+ readLongU(f));
+    if (group !== "FORM") {
+      log("Only FORM group is supported");
       return false;
     }
-    size = (sbuf8[idx++]<<24) + (sbuf8[idx++]<<16) + (sbuf8[idx++]<<8) + (sbuf8[idx++]);
-    log("BODY size = "+ size);
 
     //
-    // get BODY Data
+    // BODY Chunk
     //
-    var data = [];
-    for (let i = 0; i < size; i++) {
-      if (idx+i > sbuf8.length) {
-        log("BODY unexpected end");
-        break;
+    findIndex(f, "BODY");
+    if (f.idx > 4) {
+      f.data = [];
+      size = readLongU(f);
+      log("BODY chunk size = "+ size);
+      for (let i = 0; i < size; i++) {
+        if (f.idx+i > f.u8.length) { // it's not correct
+          log("unexpected BODY end");
+          break;
+        }
+        f.data.push(f.u8[f.idx+i]);
       }
-      data.push(sbuf8[idx+i]);
     }
-    //log(data);
+
+    //
+    // Text Chunks
+    //
+    processTextChunk(f, "ANNO", "anno");
+    processTextChunk(f, "AUTH", "auth");
+    processTextChunk(f, "NAME", "name");
+    processTextChunk(f, "(c) ", "copy");
 
     //
     // detect TYPE
     //
-    var type = false;
-    // 8SVX
-    var idx = str.indexOf("8SVX") + 4;
-    if (idx > 4) {
-      type = "8SVX";
-      log(type +" found");
-      my.parse8SVX(str, sbuf8, idx, data);
-    }
+    if (f.str.indexOf("8SVX") !== -1) my.parse8SVX(f);
+    if (f.str.indexOf("ILBM") !== -1) my.parseILBM(f, canv);
+    if (f.str.indexOf("SMUS") !== -1) my.parseSMUS(f);
 
-    // ILBM
-    idx = str.indexOf("ILBM") + 4;
-    if (idx > 4) {
-      type = "ILBM";
-      log(type +" found");
-      my.parseILBM(str, sbuf8, idx, data);
+  }
+  function findIndex(f, name) {
+    f.idx = f.str.indexOf(name) + 4;
+  }
+  function readLongU(f) {
+    return (f.u8[f.idx++]<<24) + (f.u8[f.idx++]<<16) + (f.u8[f.idx++]<<8) + (f.u8[f.idx++]);
+  }
+  function readWordU(f) {
+    return (f.u8[f.idx++]<<8) + (f.u8[f.idx++]);
+  }
+  function readByteU(f) {
+    return (f.u8[f.idx++]);
+  }
+  function processTextChunk(f, chkName, name) {
+    f.idx = f.str.indexOf(chkName) + 4;
+    if (f.idx > 4) {
+      f[name] = "";
+      var size = readLongU(f);
+      for (let i = 0; i < size; i++) {
+        f[name] += f.str[f.idx+i];
+      }
+      my.log(chkName +"="+ f[name]);
     }
-
-    // unsupported type
-    if (!(type)) {
-      log("unsupported IFF type");
-      return false;
-    }
-
   }
   function getAsString(buf) {
     var ret = [];
-    var strLen = Math.min(buf.length, 1024*1024); // not all the buffer
-    for (let i = 0; i < strLen; i++) {
+    //var strLen = Math.min(buf.length, 1024*1024); // not all the buffer
+    for (let i = 0; i < buf.length; i++) {
       ret.push( String.fromCharCode(buf[i]) );
     }
     return ret.join("");
@@ -111,6 +123,10 @@ var IFF = (function (my) {
   my.load = load;
   my.parseIFF = parseIFF;
   my.log = log;
+  my.findIndex = findIndex;
+  my.readLongU = readLongU;
+  my.readWordU = readWordU;
+  my.readByteU = readByteU;
 
   //
   // Exit

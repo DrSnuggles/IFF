@@ -1,5 +1,6 @@
 /*  IFF 8SVX by DrSnuggles
     License : WTFPL 2.0, Beerware Revision 42
+    https://wiki.amigaos.net/wiki/8SVX_IFF_8-Bit_Sampled_Voice
  */
 
 "use strict";
@@ -12,55 +13,128 @@ IFF = (function (my) {
   //
   // Private
   //
-  function parse8SVX(str, sbuf8, idx, data) {
+  function parse8SVX(f) {
+    var size;
     // read VHDR
-    if (str.substr(idx, 4) !== "VHDR") {
-      my.log("no VHDR chunk found");
-    } else {
-      idx += 4;
-      var size = (sbuf8[idx++]<<24) + (sbuf8[idx++]<<16) + (sbuf8[idx++]<<8) + (sbuf8[idx++]);
-      my.log("VHDR chunk size: "+ size);
+    my.findIndex(f, "VHDR");
+    if (f.idx > 4) {
+      f.vhdr = {};
+      my.log("VHDR chunk size: "+ my.readLongU(f));
 
-      var oneShotHiSamples = (sbuf8[idx++]<<24) + (sbuf8[idx++]<<16) + (sbuf8[idx++]<<8) + (sbuf8[idx++]);
-      var repeatHiSamples = (sbuf8[idx++]<<24) + (sbuf8[idx++]<<16) + (sbuf8[idx++]<<8) + (sbuf8[idx++]);
-      var samplesPerHiCycle = (sbuf8[idx++]<<24) + (sbuf8[idx++]<<16) + (sbuf8[idx++]<<8) + (sbuf8[idx++]);
-      var samplesPerSec = (sbuf8[idx++]<<8) + (sbuf8[idx++]);
-      var ctOctave = (sbuf8[idx++]);
-      var sCompression = (sbuf8[idx++]);
-      var volume = (sbuf8[idx++]<<24) + (sbuf8[idx++]<<16) + (sbuf8[idx++]<<8) + (sbuf8[idx++]);
+      f.vhdr.oneShotHiSamples = my.readLongU(f);
+      f.vhdr.repeatHiSamples = my.readLongU(f);
+      f.vhdr.samplesPerHiCycle = my.readLongU(f);
+      f.vhdr.samplesPerSec = my.readWordU(f);
+      f.vhdr.ctOctave = my.readByteU(f);
+      f.vhdr.sCompression = my.readByteU(f);
+      f.vhdr.volume = my.readLongU(f);
 
-      my.log("oneShotHiSamples: "+ oneShotHiSamples); // unpacked dest size
-      my.log("repeatHiSamples: "+ repeatHiSamples);
-      my.log("samplesPerHiCycle: "+ samplesPerHiCycle);
-      my.log("samplesPerSec: "+ samplesPerSec);
-      my.log("ctOctave: "+ ctOctave);
-      my.log("sCompression: "+ sCompression);
-      my.log("volume: "+ volume);
+      my.log("oneShotHiSamples: "+ f.vhdr.oneShotHiSamples); // unpacked dest size
+      my.log("repeatHiSamples: "+ f.vhdr.repeatHiSamples);
+      my.log("samplesPerHiCycle: "+ f.vhdr.samplesPerHiCycle);
+      my.log("samplesPerSec: "+ f.vhdr.samplesPerSec);
+      my.log("ctOctave: "+ f.vhdr.ctOctave);
+      my.log("sCompression: "+ f.vhdr.sCompression);
+      my.log("volume: "+ f.vhdr.volume); // 0..65536 (not used)
 
       // 0 = uncompressed
       // 1 = Fibonacci delta (wavepak)
       // 2 = unoff Exponential delta (wavepak)
       // 3 = unoff ADPCM2 (8svx_comp)
       // 4 = unoff ADPCM3 (8svx_comp)
-      switch (sCompression) {
+      switch (f.vhdr.sCompression) {
         case 1:
-          data = unpack_Delta(data, "FDC");
+          f.data = unpack_Delta(f.data, "FDC");
           break;
         case 2:
-          data = unpack_Delta(data, "EDC");
+          f.data = unpack_Delta(f.data, "EDC");
           break;
         case 3:
-          data = unpack_ADPCM(data, 2, 0);
+          f.data = unpack_ADPCM(f.data, 2, 0);
           break;
         case 4:
-          data = unpack_ADPCM(data, 3, 0);
+          f.data = unpack_ADPCM(f.data, 3, 0);
           break;
         default:
       }
-
-      play8SVX(data, samplesPerSec);
-
     }
+
+    // read CHAN
+    my.findIndex(f, "CHAN");
+    if (f.idx > 4) {
+      my.log("CHAN chunk size: "+ my.readLongU(f));
+      /*
+        not further used here but read
+        2=LEFT, 4=RIGHT, 6=STEREO
+        The BODY chunk for stereo
+        pairs contains both left and right information. To adhere to existing
+        conventions, sampling software should write first the LEFT information,
+        followed by the RIGHT. The LEFT and RIGHT information should be equal in
+        length.
+      */
+      f.chan = my.readLongU(f);
+    }
+
+    // read PAN
+    my.findIndex(f, "PAN ");
+    if (f.idx > 4) {
+      my.log("PAN chunk size: "+ my.readLongU(f));
+      /*
+        not further used here but read
+        sample has to be played on both channels
+        max volume is set in vhdr
+        leftChannelVolume = maxVolume - pan
+        rightChannelVolume = maxVolume - leftChannelVolume
+      */
+      f.pan = my.readLongU(f);
+    }
+
+    // not used yet
+    // read SEQN
+    my.findIndex(f, "SEQN");
+    if (f.idx > 4) {
+      f.seqn = [];
+      size = my.readLongU(f);
+      my.log("SEQN chunk size: "+ size);
+      for (let i = 0; i < size/8; i++) {
+        f.seqn.push({start: my.readLongU(f), end: my.readLongU(f)});
+      }
+    }
+
+    // not used yet
+    // read FADE
+    my.findIndex(f, "FADE");
+    if (f.idx > 4) {
+      my.log("FADE chunk size: "+ my.readLongU(f));
+      f.fade = my.readLongU(f);
+    }
+
+    // https://wiki.amigaos.net/wiki/8SVX_IFF_8-Bit_Sampled_Voice#Optional_Data_Chunks_ATAK_and_RLSE
+    // not used yet
+    // read ATAK
+    my.findIndex(f, "ATAK");
+    if (f.idx > 4) {
+      f.atak = [];
+      size = my.readLongU(f);
+      my.log("ATAK chunk size: "+ size);
+      for (let i = 0; i < size/6; i++) {
+        f.atak.push({duration: my.readWordU(f), dest: my.readLongU(f)});
+      }
+    }
+
+    // read RLSE
+    my.findIndex(f, "RLSE");
+    if (f.idx > 4) {
+      f.rlse = [];
+      size = my.readLongU(f);
+      my.log("RLSE chunk size: "+ size);
+      for (let i = 0; i < size/6; i++) {
+        f.rlse.push({duration: my.readWordU(f), dest: my.readLongU(f)});
+      }
+    }
+
+    my.log(f);
+    play8SVX(f.data, f.vhdr.samplesPerSec);
   }
   function unpack_Delta(buf, typ) {
     // based on https://github.com/svanderburg/lib8svx/blob/master/src/lib8svx/fibdelta.c

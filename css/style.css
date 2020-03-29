@@ -35,12 +35,15 @@ button:focus{
   pointer-events: none;
   left: 0;
   bottom: 0;
+  background-color: black;
+  image-rendering: pixelated;
+}
+#ILBMcanvas.scale {
   height: 75vw;
   width: 100vw;
-  background-color: black;
 }
   @media (min-width:calc(4/3*90vh)) {
-    #ILBMcanvas {
+    #ILBMcanvas.scale {
       height: 90vh;
       width: calc(4/3*90vh);
     }
@@ -53,4 +56,8 @@ button:focus{
   z-index: -1;
   height: 100vh;
   overflow: scroll;
+}
+
+.aa {
+  image-rendering: auto !important;
 }

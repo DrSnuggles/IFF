@@ -12,6 +12,17 @@
 <body>
   <!-- top menu -->
   <select id="testselect" onchange="IFFLoad(this.value)">
+    <optgroup label="ILBM">
+      <option value="tst/ilbm/NewTut.Ham">NewTut.Ham</option>
+      <option value="tst/ilbm/TutGallery.ham8">TutGallery.ham8</option>
+      <option value="tst/ilbm/Tut256.lores">Tut256.lores</option>
+      <option value="tst/ilbm/KingTut">KingTut</option>
+      <option value="tst/ilbm/Venus">Venus</option>
+      <option value="tst/ilbm/Waterfall">Waterfall</option>
+      <option value="tst/ilbm/marbles">Marbles 24bpl NoCMAP</option>
+      <option value="tst/ilbm/Bird_interlace">Fractal EHB Interlace</option>
+      <option value="tst/ilbm/DRAGON.Productivity">DRAGON.Productivity</option>
+    </optgroup>
     <optgroup label="8SVX">
       <option value="tst/8svx/terminator">Terminator</option>
       <option value="tst/8svx/terminator_FDC">Terminator FDC</option>
@@ -24,38 +35,39 @@
       <option value="tst/8svx/sound3_ADPCM2">Sound3 ADPCM2</option>
       <option value="tst/8svx/sound3_ADPCM3">Sound3 ADPCM3</option>
     </optgroup>
-    <optgroup label="ILBM">
-      <option value="tst/ilbm/venus">Venus</option>
-      <option value="tst/ilbm/marbles">Marbles</option>
-    </optgroup>
-    <optgroup label="ILBM DP1">
-      <option value="tst/ilbm/DP1/allfonts">allfonts</option>
-      <option value="tst/ilbm/DP1/fantasy scene">fantasy scene</option>
-      <option value="tst/ilbm/DP1/Graph">Graph</option>
-      <option value="tst/ilbm/DP1/guess">guess</option>
-      <option value="tst/ilbm/DP1/KingTut">KingTut</option>
-      <option value="tst/ilbm/DP1/PaintCan">PaintCan</option>
-      <option value="tst/ilbm/DP1/Patterns">Patterns</option>
-      <option value="tst/ilbm/DP1/StarFlight">StarFlight</option>
-      <option value="tst/ilbm/DP1/Venus">Venus</option>
-      <option value="tst/ilbm/DP1/Waterfall">Waterfall</option>
-      <option value="tst/ilbm/DP1/xmas scene">xmas scene</option>
-    </optgroup>
   </select>
   <button onclick="IFFLoad(testselect.value)">Load</button>
+  AntiAlias<input type="checkbox" id="cb_alias" onchange="toggleAlias()">
+  <input type="checkbox" id="cb_size" onchange="toggleSize()">Original size
   <div id="info">Drop your own files here<br/></div>
 
   <!-- canvas for ILBM -->
-  <canvas id="ILBMcanvas"></canvas>
+  <canvas id="ILBMcanvas" class="scale"></canvas>
 
   <!-- how to use -->
   <script>
-    function IFFLoad(url){
+    function IFFLoad(url) {
+      info.innerHTML = "";
       IFF.load(url, ILBMcanvas);
     }
     function IFFParse(buf) {
       // used by DND
+      info.innerHTML = "";
       IFF.parseIFF(buf, ILBMcanvas);
+    }
+    function toggleAlias() {
+      if (cb_alias.checked) {
+        ILBMcanvas.classList.add("aa");
+      } else {
+        ILBMcanvas.classList.remove("aa");
+      }
+    }
+    function toggleSize() {
+      if (cb_size.checked) {
+        ILBMcanvas.classList.remove("scale");
+      } else {
+        ILBMcanvas.classList.add("scale");
+      }
     }
   </script>
 
