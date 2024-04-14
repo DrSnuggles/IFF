@@ -1,75 +1,79 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>IFF by DrSnuggles</title>
-  <link href="css/style.css" type="text/css" rel="stylesheet"/>
-  <script src="js/dnd.js"></script> <!-- drag n drop your own files -->
-  <script src="js/iff.js"></script> <!-- general IFF parser -->
-    <script src="js/8svx.js"></script>
-    <script src="js/ilbm.js"></script>
+	<meta charset="utf-8">
+	<title>IFF by DrSnuggles</title>
+	<link href="css/style.css" type="text/css" rel="stylesheet"/>
+	<script src="js/dnd.js"></script> <!-- drag n drop your own files -->
+	<script src="js/iff.js"></script> <!-- general IFF parser -->
+		<script src="js/8svx.js"></script>
+		<script src="js/ilbm.js"></script>
 </head>
 <body>
-  <!-- top menu -->
-  <select id="testselect" onchange="IFFLoad(this.value)">
-    <optgroup label="ILBM">
-      <option value="tst/ilbm/NewTut.Ham">NewTut.Ham</option>
-      <option value="tst/ilbm/TutGallery.ham8">TutGallery.ham8</option>
-      <option value="tst/ilbm/Tut256.lores">Tut256.lores</option>
-      <option value="tst/ilbm/KingTut">KingTut</option>
-      <option value="tst/ilbm/Venus">Venus</option>
-      <option value="tst/ilbm/Waterfall">Waterfall</option>
-      <option value="tst/ilbm/marbles">Marbles 24bpl NoCMAP</option>
-      <option value="tst/ilbm/Bird_interlace">Fractal EHB Interlace</option>
-      <option value="tst/ilbm/DRAGON.Productivity">DRAGON.Productivity</option>
-    </optgroup>
-    <optgroup label="8SVX">
-      <option value="tst/8svx/terminator">Terminator</option>
-      <option value="tst/8svx/terminator_FDC">Terminator FDC</option>
-      <option value="tst/8svx/terminator_EDC">Terminator EDC</option>
-      <option value="tst/8svx/terminator_ADPCM2">Terminator ADPCM2</option>
-      <option value="tst/8svx/terminator_ADPCM3">Terminator ADPCM3</option>
-      <option value="tst/8svx/sound3">Sound3</option>
-      <option value="tst/8svx/sound3_FDC">Sound3 FDC</option>
-      <option value="tst/8svx/sound3_EDC">Sound3 EDC</option>
-      <option value="tst/8svx/sound3_ADPCM2">Sound3 ADPCM2</option>
-      <option value="tst/8svx/sound3_ADPCM3">Sound3 ADPCM3</option>
-    </optgroup>
-  </select>
-  <button onclick="IFFLoad(testselect.value)">Load</button>
-  AntiAlias<input type="checkbox" id="cb_alias" onchange="toggleAlias()">
-  <input type="checkbox" id="cb_size" onchange="toggleSize()">Original size
-  <div id="info">Drop your own files here<br/></div>
+	<!-- top menu -->
+	<select id="testselect" onchange="IFFLoad(this.value)">
+		<optgroup label="ILBM">
+			<option value="tst/ilbm/danbos.sham.iff">danbos.sham.iff</option>
+			<option value="tst/ilbm/danbos.ham.iff">danbos 16:9</option>
+			<option value="tst/ilbm/danbos256.ham.iff">danbos256.ham.iff</option>
+			<option value="tst/ilbm/NewTut.Ham">NewTut.Ham</option>
+			<option value="tst/ilbm/TutGallery.ham8">TutGallery.ham8</option>
+			<option value="tst/ilbm/Tut256.lores">Tut256.lores</option>
+			<option value="tst/ilbm/KingTut">KingTut</option>
+			<option value="tst/ilbm/Venus">Venus</option>
+			<option value="tst/ilbm/Waterfall">Waterfall</option>
+			<option value="tst/ilbm/marbles">Marbles 24bpl NoCMAP</option>
+			<option value="tst/ilbm/Bird_interlace">Fractal EHB Interlace</option>
+			<option value="tst/ilbm/DRAGON.Productivity">DRAGON.Productivity</option>
+			<option value="tst/ilbm/TheLook">TheLook CTBL</option>
+		</optgroup>
+		<optgroup label="8SVX">
+			<option value="tst/8svx/terminator">Terminator</option>
+			<option value="tst/8svx/terminator_FDC">Terminator FDC</option>
+			<option value="tst/8svx/terminator_EDC">Terminator EDC</option>
+			<option value="tst/8svx/terminator_ADPCM2">Terminator ADPCM2</option>
+			<option value="tst/8svx/terminator_ADPCM3">Terminator ADPCM3</option>
+			<option value="tst/8svx/sound3">Sound3</option>
+			<option value="tst/8svx/sound3_FDC">Sound3 FDC</option>
+			<option value="tst/8svx/sound3_EDC">Sound3 EDC</option>
+			<option value="tst/8svx/sound3_ADPCM2">Sound3 ADPCM2</option>
+			<option value="tst/8svx/sound3_ADPCM3">Sound3 ADPCM3</option>
+		</optgroup>
+	</select>
+	<button onclick="IFFLoad(testselect.value)">Load</button>
+	AntiAlias<input type="checkbox" id="cb_alias" onchange="toggleAlias()">
+	<input type="checkbox" id="cb_size" onchange="toggleSize()">Original size
+	<div id="info">Drop your own files here<br/></div>
 
-  <!-- canvas for ILBM -->
-  <canvas id="ILBMcanvas" class="scale"></canvas>
+	<!-- canvas for ILBM -->
+	<canvas id="ILBMcanvas" class="scale"></canvas>
 
-  <!-- how to use -->
-  <script>
-    function IFFLoad(url) {
-      info.innerHTML = "";
-      IFF.load(url, ILBMcanvas);
-    }
-    function IFFParse(buf) {
-      // used by DND
-      info.innerHTML = "";
-      IFF.parseIFF(buf, ILBMcanvas);
-    }
-    function toggleAlias() {
-      if (cb_alias.checked) {
-        ILBMcanvas.classList.add("aa");
-      } else {
-        ILBMcanvas.classList.remove("aa");
-      }
-    }
-    function toggleSize() {
-      if (cb_size.checked) {
-        ILBMcanvas.classList.remove("scale");
-      } else {
-        ILBMcanvas.classList.add("scale");
-      }
-    }
-  </script>
+	<!-- how to use -->
+	<script>
+		function IFFLoad(url) {
+			info.innerHTML = "";
+			IFF.load(url, ILBMcanvas);
+		}
+		function IFFParse(buf) {
+			// used by DND
+			info.innerHTML = "";
+			IFF.parseIFF(buf, ILBMcanvas);
+		}
+		function toggleAlias() {
+			if (cb_alias.checked) {
+				ILBMcanvas.classList.add("aa");
+			} else {
+				ILBMcanvas.classList.remove("aa");
+			}
+		}
+		function toggleSize() {
+			if (cb_size.checked) {
+				ILBMcanvas.classList.remove("scale");
+			} else {
+				ILBMcanvas.classList.add("scale");
+			}
+		}
+	</script>
 
 </body>
 </html>
