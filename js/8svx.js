@@ -64,8 +64,7 @@ IFF = (function (my) {
     if (f.idx > 4) {
       my.log("CHAN chunk size: "+ my.readLongU(f));
       /*
-        not further used here but read
-        2=LEFT, 4=RIGHT, 6=STEREO
+        2=LEFT, 4=RIGHT, 6=STEREO, 30=QUADRO
         The BODY chunk for stereo
         pairs contains both left and right information. To adhere to existing
         conventions, sampling software should write first the LEFT information,
@@ -73,7 +72,19 @@ IFF = (function (my) {
         length.
       */
       f.chan = my.readLongU(f);
+      my.log("CHAN: " + f.chan);
     }
+
+    var channels = 1; // added by mrupp to support stereo and quadro files
+    switch (f.chan) {
+      case 6:
+        channels = 2;
+        break;
+      case 30:
+        channels = 4;
+        break;
+    }
+    my.log("channels: " + channels);
 
     // read PAN
     my.findIndex(f, "PAN ");
@@ -133,8 +144,7 @@ IFF = (function (my) {
       }
     }
 
-    console.log(f);
-    play8SVX(f.data, f.vhdr.samplesPerSec);
+    play8SVX(f.data, f.vhdr.samplesPerSec, f.id, channels);
   }
   function unpack_Delta(buf, typ) {
     // based on https://github.com/svanderburg/lib8svx/blob/master/src/lib8svx/fibdelta.c
@@ -226,8 +236,16 @@ IFF = (function (my) {
   	}
   	return ret; // joinCode (delta<<16|(estMax&0xffff));
   }
-  function play8SVX(buf, srcRate) {
-    var ctx = new AudioContext({sampleRate: srcRate});
+  function play8SVX(buf, srcRate, id, channels) { // channels: 1, 2 or 4
+    var ctx;
+    try {
+      ctx = new AudioContext({sampleRate: srcRate});
+    }
+    catch (ex) {
+      my.log("Error on init new AudioContext() with samplerate " + srcRate + ": " + ex);
+      my.log("Retrying without specifying samplerate and using resample() instead.");
+      ctx = new AudioContext();
+    }
     var destRate = ctx.sampleRate;
     my.log("srcRate: "+ srcRate);
     my.log("destRate: "+ destRate);
@@ -236,23 +254,50 @@ IFF = (function (my) {
       buf = resample(buf, srcRate, destRate);
     }
 
-    var node = ctx.createScriptProcessor(0, 0, 1);
+    id = id || "id"; // ensure it has a value
+    channels = channels || 1;
+    my.stop8SVX(id);
+    var node = ctx.createScriptProcessor(0, 0, channels); // added by mrupp: support for stereo and quadro
+    my.audioNodes[id] = node;
     var j = 0;
     var buffer = new Int8Array(buf);
+    var offset = channels > 1 ? (buffer.length / channels) : 0;
+    if (offset != parseInt(offset)) {
+      my.log("Invalid " + channels + " channels file: all channel data need to be of same length!");
+      offset = parseInt(offset); // this might just work (or not)
+    }
     node.onaudioprocess = function(e) {
-      var out = e.outputBuffer.getChannelData(0);
-      for (let i = 0; i < out.length; i++) {
-        if (j < buffer.length) {
-          out[i] = buffer[j] / 127;
+      var outs = [];
+      for (var c = 0; c < channels; c++) {
+        outs[c] = e.outputBuffer.getChannelData(c);
+      }
+      for (let i = 0; i < outs[0].length; i++) {
+        if (j < (buffer.length / channels)) {
+          for (var c = 0; c < channels; c++) {
+            outs[c][i] = buffer[j + (c * offset)] / 127;
+          }
         } else {
           // end of source buffer reached
-          out[i] = 0;
+          for (var c = 0; c < channels; c++) {
+            outs[c][i] = 0;
+          }
+          node.disconnect(0); // added my mrupp: without, node.onaudioprocess() will go on forever
+          delete my.audioNodes[id];
+          my.log("finished playing with id " + id);
+          break;
         }
         j++;
       }
-
     }
     node.connect(ctx.destination);
+    my.log("start playing with id " + id);
+  }
+  function stop8SVX(id) {
+    if (my.audioNodes[id]) {
+      my.audioNodes[id].disconnect(0);
+      delete my.audioNodes[id];
+      my.log("stop playing with id " + id);
+    }
   }
   function resample(buf, srcRate, destRate) {
     // i only take care of upsampling and i do not even interpolate
@@ -286,6 +331,7 @@ IFF = (function (my) {
   //
   my.parse8SVX = parse8SVX;
   my.play8SVX = play8SVX;
+  my.stop8SVX = stop8SVX; // added my mrupp
 
   //
   // Exit
