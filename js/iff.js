@@ -17,24 +17,34 @@ var IFF = (function (my) {
   //
   // Private
   //
+  function setDebug(value) {
+    debug = value;
+  }
   function log(out) {
     if (debug) console.log("IFF:", out);
     var dbg_DOM = document.getElementById("info");
     if (dbg_DOM) dbg_DOM.innerHTML += out +"<br/>";
   }
-  function load(url, canv) {
-    log("load: "+ url);
+  function load(url, canv, id) {
+    if (id) {
+      log("load with id '" + id + "': " + url);
+    }
+    else {
+      id = url;
+      log("no id provided, using url as id: " + url);
+    }
     var xhr = new XMLHttpRequest();
     xhr.open("GET", url, true);
     xhr.responseType = "arraybuffer";
     xhr.onload = function() {
       log("File loaded");
-      parseIFF(xhr.response, canv);
+      parseIFF(xhr.response, canv, id);
     }
     xhr.send();
   }
-  function parseIFF(buf, canv) {
+  function parseIFF(buf, canv, id) {
     var f = {}; // form object, should be better group object....
+    f.id = id; // added by mrupp: an id is needed to call stop8SVX(id)
     //f.i8 = new Int8Array(buf);
     f.u8 = new Uint8Array(buf);
     f.str = getAsString(f.u8);
@@ -127,6 +137,9 @@ var IFF = (function (my) {
   my.readLongU = readLongU;
   my.readWordU = readWordU;
   my.readByteU = readByteU;
+
+  my.setDebug = setDebug;
+  my.audioNodes = {};
 
   //
   // Exit
