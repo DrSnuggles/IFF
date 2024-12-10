@@ -1,135 +1,84 @@
 /*  IFF tools by DrSnuggles
-    License : Public Domain
+	License : Public Domain
 
-    Actually recognized types: 8SVX, ILBM
-    https://wiki.amigaos.net/wiki/IFF_FORM_and_Chunk_Registry
- */
+	Actually recognized types: 8SVX, ILBM, 16SV, AIFF
+	https://wiki.amigaos.net/wiki/IFF_FORM_and_Chunk_Registry
+*/
 
-"use strict";
+import {log} from './log.js'
+import {getString, getUint32} from './readChunk.js'
+import {parse as parseILBM} from './ilbm.js'
+import {parse as parseSVX} from './svx.js'
+import {parse as parseAIFF} from './aiff.js'
 
-var IFF = (function (my) {
-  //
-  // Init
-  //
-  var debug = false;
-  var size;
+export class IFF {
+	constructor(co,cb) {
+		this.idx = 0
+		this.cb = cb
+		if (typeof co == 'string') this.load(co)
+		if (typeof co == 'object') this.parse(co)
+	}
+	
+	load(url) {
+		fetch(url)
+		.then(r => r.arrayBuffer())
+		.then(ab => {
+			log('File loaded')
+			this.parse(ab)
+		})
+		.catch(e => console.error(e))
+	}
+	async parse(ab) {
+		this.dv = new DataView(ab)
 
-  //
-  // Private
-  //
-  function log(out) {
-    if (debug) console.log("IFF:", out);
-    var dbg_DOM = document.getElementById("info");
-    if (dbg_DOM) dbg_DOM.innerHTML += out +"<br/>";
-  }
-  function load(url, canv) {
-    log("load: "+ url);
-    var xhr = new XMLHttpRequest();
-    xhr.open("GET", url, true);
-    xhr.responseType = "arraybuffer";
-    xhr.onload = function() {
-      log("File loaded");
-      parseIFF(xhr.response, canv);
-    }
-    xhr.send();
-  }
-  function parseIFF(buf, canv) {
-    var f = {}; // form object, should be better group object....
-    //f.i8 = new Int8Array(buf);
-    f.u8 = new Uint8Array(buf);
-    f.str = getAsString(f.u8);
+		// detect EA IFF 85 group identifier
+		// If it doesn’t start with “FORM”, “LIST”, or “CAT ”, it’s not an IFF-85 file.
+		const group = getString(this, 4)
+		if (['FORM', 'LIST', 'CAT '].indexOf(group) === -1) {
+			log('This is not an IFF-85 file')
+			return
+		}
+		if (group !== 'FORM') {
+			log('Only FORM group is supported')
+			return
+		}
+		this.group = group
+		this.formSize = getUint32(this)
+		log(this.group + " chunk size = "+ this.formSize)
+		if (this.formSize + 8 !== this.dv.byteLength) {
+			log('FORM size does not match file size: '+this.formSize+8+' !== '+this.dv.byteLength)
+		}
 
-    // detect EA IFF 85 group identifier
-    var group = f.str.substr(0, 4);
-    if (["FORM", "CAT ", "LIST", "PROP"].indexOf(group) === -1) {
-      log("This is not an IFF file");
-      return false;
-    }
-    f.idx = 4;
-    log(group + " chunk size = "+ readLongU(f));
-    if (group !== "FORM") {
-      log("Only FORM group is supported");
-      return false;
-    }
+		// next is the subtype
+		this.subType = getString(this, 4)
 
-    //
-    // BODY Chunk
-    //
-    findIndex(f, "BODY");
-    if (f.idx > 4) {
-      f.data = [];
-      size = readLongU(f);
-      log("BODY chunk size = "+ size);
-      for (let i = 0; i < size; i++) {
-        if (f.idx+i > f.u8.length) { // it's not correct
-          log("unexpected BODY end");
-          break;
-        }
-        f.data.push(f.u8[f.idx+i]);
-      }
-    }
+		switch (this.subType) {
+			case 'ILBM':	// Image
+				//if (typeof parseILBM == 'undefined') window.parseILBM = await import('./ilbm.js')
+				//await parseILBM.parse(this)
+				await parseILBM(this)
+				break
+			case 'SMUS':	// Music composition
+				break
+			// Audio
+			case '8SVX':
+			case '16SV':
+				this.bits = (this.subType == '8SVX') ? 8 : 16
+				//if (typeof parseSVX == 'undefined') window.parseSVX = await import('./svx.js')
+				//await parseSVX.parse(this)
+				await parseSVX(this)
+				break
+			case 'AIFF':
+			case 'AIFC':
+				//if (typeof parseAIF == 'undefined') window.parseAIFF = await import('./aiff.js')
+				//await parseAIFF.parse(this)
+				await parseAIFF(this)
+				break
+			default:
+		}
 
-    //
-    // Text Chunks
-    //
-    processTextChunk(f, "ANNO", "anno");
-    processTextChunk(f, "AUTH", "auth");
-    processTextChunk(f, "NAME", "name");
-    processTextChunk(f, "(c) ", "copy");
+		this.cb()	// we are done.. callback
+	}
+}
 
-    //
-    // detect TYPE
-    //
-    if (f.str.indexOf("8SVX") !== -1) my.parse8SVX(f);
-    if (f.str.indexOf("ILBM") !== -1) my.parseILBM(f, canv);
-    if (f.str.indexOf("SMUS") !== -1) my.parseSMUS(f);
-
-  }
-  function findIndex(f, name) {
-    f.idx = f.str.indexOf(name) + 4;
-  }
-  function readLongU(f) {
-    return (f.u8[f.idx++]<<24) + (f.u8[f.idx++]<<16) + (f.u8[f.idx++]<<8) + (f.u8[f.idx++]);
-  }
-  function readWordU(f) {
-    return (f.u8[f.idx++]<<8) + (f.u8[f.idx++]);
-  }
-  function readByteU(f) {
-    return (f.u8[f.idx++]);
-  }
-  function processTextChunk(f, chkName, name) {
-    f.idx = f.str.indexOf(chkName) + 4;
-    if (f.idx > 4) {
-      f[name] = "";
-      var size = readLongU(f);
-      for (let i = 0; i < size; i++) {
-        f[name] += f.str[f.idx+i];
-      }
-      my.log(chkName +"="+ f[name]);
-    }
-  }
-  function getAsString(buf) {
-    var ret = [];
-    //var strLen = Math.min(buf.length, 1024*1024); // not all the buffer
-    for (let i = 0; i < buf.length; i++) {
-      ret.push( String.fromCharCode(buf[i]) );
-    }
-    return ret.join("");
-  }
-
-  //
-  // Public
-  //
-  my.load = load;
-  my.parseIFF = parseIFF;
-  my.log = log;
-  my.findIndex = findIndex;
-  my.readLongU = readLongU;
-  my.readWordU = readWordU;
-  my.readByteU = readByteU;
-
-  //
-  // Exit
-  //
-  return my;
-}(IFF || {}));
+window.IFF = IFF	// for easier access
