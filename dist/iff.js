@@ -13,10 +13,19 @@ function getString(dat, size) {
 	dat.idx += size;
 	return ret
 }
-function getInt32(dat) {
-	const ret = dat.dv.getInt32(dat.idx, false);
-	dat.idx += 4;
+function getUint8(dat) {
+	const ret = dat.dv.getUint8(dat.idx);
+	dat.idx++;
 	return ret
+}
+function getUint16(dat) {
+	const ret = dat.dv.getUint16(dat.idx, false);
+	dat.idx += 2;
+	return ret
+}
+function getUint24(dat) {
+	// not native. This is also upscaled to 32bit for later signed bit shift to work
+	return (getUint8(dat)<<24) + (getUint8(dat)<<16) + (getUint8(dat)<<8)
 }
 function getUint32(dat) {
 	const ret = dat.dv.getUint32(dat.idx, false);
@@ -28,14 +37,13 @@ function getInt16(dat) {
 	dat.idx += 2;
 	return ret
 }
-function getUint16(dat) {
-	const ret = dat.dv.getUint16(dat.idx, false);
-	dat.idx += 2;
-	return ret
+function getInt24(dat) {
+	// not native
+	return getUint24(dat)<<0	// javascript uses bit operations on 32 bit
 }
-function getUint8(dat) {
-	const ret = dat.dv.getUint8(dat.idx);
-	dat.idx++;
+function getInt32(dat) {
+	const ret = dat.dv.getInt32(dat.idx, false);
+	dat.idx += 4;
 	return ret
 }
 
@@ -4052,30 +4060,50 @@ async function parse$2(dat) {
 				break
 			case 'SSND':
 				log('SSND chunk size: '+ chunk.size);
+				dat.ssnd = {
+					offset: getUint32(dat),				// actually zero is expected
+					blockSize: getUint32(dat),			// 
+				};
 				if (!dat.comm.compressionType || dat.comm.compressionType == 'NONE') {
-					// todo: actual only 8 or 16 bits
+					// todo: actual only 8,16,24,32 bits
 					if (dat.bits === 8) {
 						// the final uncompressed BODY is signed 8bit -128...+127
 						dat.data = new Int8Array( chunk.size );
 						dat.data.set( new Int8Array(dat.dv.buffer).slice(dat.idx, dat.idx+chunk.size));
-					} else {
+						dat.idx += chunk.size;
+					} else if (dat.bits === 16) {
 						// the final uncompressed BODY is signed 16bit -32768...+32767
 						dat.data = [];
 						for (let i = 0; i < chunk.size/2; i++) {
-							dat.data.push( dat.dv.getInt16(dat.idx + 2*i, false) );
+							dat.data.push( getInt16(dat) );
 						}
 						dat.data = new Int16Array( dat.data );	// want typed array
+					} else if (dat.bits === 24) {
+						// the final uncompressed BODY is signed 24bit −8388608...+8388607
+						// dataview doesn't know 24 bit
+						dat.data = [];
+						for (let i = 0; i < chunk.size/3; i++) {
+							dat.data.push( getInt24(dat) );
+						}
+						dat.data = new Int32Array( dat.data );	// want typed array is also not available in JS
+					} else if (dat.bits === 32) {
+						// the final uncompressed BODY is signed 32bit -2147483648...+-2147483647
+						dat.data = [];
+						for (let i = 0; i < chunk.size/4; i++) {
+							dat.data.push( getInt32(dat) );
+						}
+						dat.data = new Int32Array( dat.data );	// want typed array
 					}
 				} else {
-					// unpackers wants 8 bit unsigned
+					// unpackers wants 8 bit unsigned and are just 8 to 16 bit
 					// Here we do not need to split by channels... uff ;)
 					const packedData = new Uint8Array(chunk.size);
 					packedData.set( new Uint8Array(dat.dv.buffer).slice(dat.idx, dat.idx+chunk.size) );
 					//dat.data = eval('decode_'+dat.comm.compressionType)(packedData)
 					if (dat.comm.compressionType == 'alaw') dat.data = decode(packedData);
 					if (dat.comm.compressionType == 'ulaw') dat.data = decode$1(packedData);
+					dat.idx += chunk.size;
 				}
-				dat.idx += chunk.size;
 				break
 			default:
 				processCommonChunks(dat, chunk);
@@ -4107,6 +4135,8 @@ function prepareChannels$1(dat) {
 		let val = dat.data[i];
 		if (dat.bits == 8) val = val / 128;
 		if (dat.bits == 16) val = val / 32768;
+		if (dat.bits == 24) val = val / 2147483648; // 8388608 i scaled the 24 bit to 32 bit
+		if (dat.bits == 32) val = val / 2147483648;
 		dat.ch[(i % dat.channels)].push( val );
 	}
 }
