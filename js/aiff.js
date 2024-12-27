@@ -83,7 +83,7 @@ export async function parse(dat) {
 	prepareChannels(dat)
 	await initContext(dat)
 
-	dat.play = () => { play(dat) }
+	dat.play = (loops) => { play(dat, loops) }
 	dat.stop = () => { stop(dat) }
 }
 
