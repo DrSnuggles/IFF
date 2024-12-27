@@ -37,14 +37,23 @@ export async function initContext(dat) {
 	dat.aw.connect(dat.ctx.destination)	// connect to output
 	dat.aw.port.onmessage = (msg) => {
 		//console.log('Message from audioWorklet worker', msg)
-		if (msg.data.pos == -1) stop(dat)
+		if (msg.data.pos == -1) {
+			if (dat.loops) {
+				dat.looped++
+				log('looped: ' + dat.looped + ' of ' + (dat.loops < 0 ? 'infinite (until stop() is called)' : dat.loops))
+				if (dat.loops >= 0 && dat.looped >= dat.loops) stop(dat)
+			}
+			else stop(dat)
+		}
 	}
 }
 
-export async function play(dat) {
+export async function play(dat, loops) { // use loops < 0 for infinite looping or until stop() is called
+	dat.loops = loops
+	dat.looped = 0
 	dat.aw.port.postMessage({ch:dat.ch})
 }
 
 export function stop(dat) {
-	if (dat.aw) dat.ctx.close()
+	if (dat.aw && dat.ctx && dat.ctx.state !== 'closed') dat.ctx.close()
 }
