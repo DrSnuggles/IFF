@@ -7,19 +7,9 @@ export function getString(dat, size) {
 	dat.idx += size
 	return ret
 }
-export function getInt32(dat) {
-	const ret = dat.dv.getInt32(dat.idx, false)
-	dat.idx += 4
-	return ret
-}
-export function getUint32(dat) {
-	const ret = dat.dv.getUint32(dat.idx, false)
-	dat.idx += 4
-	return ret
-}
-export function getInt16(dat) {
-	const ret = dat.dv.getInt16(dat.idx, false)
-	dat.idx += 2
+export function getUint8(dat) {
+	const ret = dat.dv.getUint8(dat.idx)
+	dat.idx++
 	return ret
 }
 export function getUint16(dat) {
@@ -27,14 +17,32 @@ export function getUint16(dat) {
 	dat.idx += 2
 	return ret
 }
+export function getUint24(dat) {
+	// not native. This is also upscaled to 32bit for later signed bit shift to work
+	return (getUint8(dat)<<24) + (getUint8(dat)<<16) + (getUint8(dat)<<8)
+}
+export function getUint32(dat) {
+	const ret = dat.dv.getUint32(dat.idx, false)
+	dat.idx += 4
+	return ret
+}
 export function getInt8(dat) {
 	const ret = dat.dv.getInt8(dat.idx)
 	dat.idx++
 	return ret
 }
-export function getUint8(dat) {
-	const ret = dat.dv.getUint8(dat.idx)
-	dat.idx++
+export function getInt16(dat) {
+	const ret = dat.dv.getInt16(dat.idx, false)
+	dat.idx += 2
+	return ret
+}
+export function getInt24(dat) {
+	// not native
+	return getUint24(dat)<<0	// javascript uses bit operations on 32 bit
+}
+export function getInt32(dat) {
+	const ret = dat.dv.getInt32(dat.idx, false)
+	dat.idx += 4
 	return ret
 }
 
