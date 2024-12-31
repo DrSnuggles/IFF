@@ -6,7 +6,7 @@ import {getString, getUint8, getUint32, getInt16, getInt24, getInt32, readChunk,
 import {Float80} from './float80.js'
 import {decode as decode_alaw} from './unpackers/alaw.js'
 import {decode as decode_ulaw} from './unpackers/mulaw.js'
-import {initContext, play, stop} from './audio.js'
+import {initContext, play, stop, pause, resume, getPosition, setPosition} from './audio.js'
 
 export async function parse(dat) {
 	// read chunks
@@ -96,7 +96,9 @@ export async function parse(dat) {
 
 	}
 	if (!dat.comm) {
-		log('Missing COMM chunk. This is not a valid AIFF file')
+		const msg = 'Missing COMM chunk. This is not a valid AIFF file.'
+		log(msg)
+		if (dat.cbOnError) dat.cbOnError(new Error(msg))
 		return
 	}
 
@@ -105,6 +107,10 @@ export async function parse(dat) {
 
 	dat.play = (loops) => { play(dat, loops) }
 	dat.stop = () => { stop(dat) }
+	dat.pause = () => { pause(dat) }
+	dat.resume = () => { resume(dat) }
+	dat.getPosition = () => { return getPosition(dat) }
+	dat.setPosition = (pos) => { setPosition(dat, pos) }
 }
 
 function prepareChannels(dat) {

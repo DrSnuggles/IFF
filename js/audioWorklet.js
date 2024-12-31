@@ -21,14 +21,15 @@ class BufferPlayer extends AudioWorkletProcessor {
 			// detect end
 			if (this.frame >= this.ch[0].length) {
 				this.frame = -1
-				this.port.postMessage({pos: -1})
 			}
+			this.port.postMessage({frame: this.frame})
 		}
 		return true
 	} // process
 
 	handleMessage_(msg) {
 		if (msg.data.ch) this.ch = msg.data.ch
+		if (msg.data.frame >= 0) this.frame = msg.data.frame
 	} // handleMessage_
 }
 registerProcessor('bufferplayer-processor', BufferPlayer)

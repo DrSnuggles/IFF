@@ -6,13 +6,15 @@ import {log} from './log.js'
 import {getUint32, getUint16, getUint8, readChunk, processCommonChunks} from './readChunk.js'
 import {unpack_Delta} from './unpackers/delta.js'
 import {unpack_ADPCM} from './unpackers/adpcm.js'
-import {initContext, play, stop} from './audio.js'
+import {initContext, play, stop, pause, resume, getPosition, setPosition} from './audio.js'
 
 export async function parse(dat) {
 	// read next chunk, needs to be VHDR
 	let chunk = readChunk(dat)
 	if (chunk.name !== 'VHDR') {
-		log('Missing VHDR chunk. This is not a valid SVX file')
+		const msg = 'Missing VHDR chunk. This is not a valid SVX file.'
+		log(msg)
+		if (dat.cbOnError) dat.cbOnError(new Error(msg))
 		return
 	}
 	log('VHDR chunk size: '+ chunk.size)
@@ -162,6 +164,10 @@ export async function parse(dat) {
 
 	dat.play = (loops) => { play(dat, loops) }
 	dat.stop = () => { stop(dat) }
+	dat.pause = () => { pause(dat) }
+	dat.resume = () => { resume(dat) }
+	dat.getPosition = () => { return getPosition(dat) }
+	dat.setPosition = (pos) => { setPosition(dat, pos) }
 }
 
 function prepareChannels(dat) {

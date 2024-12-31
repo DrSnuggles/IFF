@@ -25,9 +25,12 @@ export async function initContext(dat) {
 		}
 	}
 
+	dat.duration = dat.ch.length > 0 ? (dat.ch[0].length / dat.sampleRate) : 0;
+	log('duration in seconds: '+ dat.duration)
+
 	// Worker
 	//await dat.ctx.audioWorklet.addModule( new URL('audioWorklet.js', import.meta.url) )
-	await dat.ctx.audioWorklet.addModule(URL.createObjectURL( new Blob(['class BufferPlayer extends AudioWorkletProcessor{constructor(){super(),this.port.onmessage=this.handleMessage_.bind(this),this.ch=[],this.frame=0}process(e,s,r){if(0==this.ch.length)return!0;if(-1==this.frame)return!0;for(let e=0;e<s[0][0].length;e++){for(let r=0;r<s[0].length;r++)s[0][r][e]=this.ch[r][this.frame];this.frame++,this.frame>=this.ch[0].length&&(this.frame=-1,this.port.postMessage({pos:-1}))}return!0}handleMessage_(e){e.data.ch&&(this.ch=e.data.ch)}}registerProcessor("bufferplayer-processor",BufferPlayer)'], {type: "application/javascript"}) ))
+	await dat.ctx.audioWorklet.addModule(URL.createObjectURL( new Blob(['class BufferPlayer extends AudioWorkletProcessor{constructor(){super(),this.port.onmessage=this.handleMessage_.bind(this),this.ch=[],this.frame=0}process(e,r,s){if(0==this.ch.length)return!0;if(-1==this.frame)return!0;for(let e=0;e<r[0][0].length;e++){for(let s=0;s<r[0].length;s++)r[0][s][e]=this.ch[s][this.frame];this.frame++,this.frame>=this.ch[0].length&&(this.frame=-1),this.port.postMessage({frame:this.frame})}return!0}handleMessage_(e){e.data.ch&&(this.ch=e.data.ch),e.data.frame>=0&&(this.frame=e.data.frame)}}registerProcessor("bufferplayer-processor",BufferPlayer)'], {type: "application/javascript"}) ))
 
 	dat.aw = new AudioWorkletNode(dat.ctx, 'bufferplayer-processor', {
 		numberOfInputs: 0,
@@ -37,13 +40,22 @@ export async function initContext(dat) {
 	dat.aw.connect(dat.ctx.destination)	// connect to output
 	dat.aw.port.onmessage = (msg) => {
 		//console.log('Message from audioWorklet worker', msg)
-		if (msg.data.pos == -1) {
+		if (msg.data.frame >= 0) {
+			dat.currentTime = msg.data.frame / dat.sampleRate
+		}
+		else if (msg.data.frame == -1) {
 			if (dat.loops) {
 				dat.looped++
 				log('looped: ' + dat.looped + ' of ' + (dat.loops < 0 ? 'infinite (until stop() is called)' : dat.loops))
-				if (dat.loops >= 0 && dat.looped >= dat.loops) stop(dat)
+				if (dat.loops >= 0 && dat.looped >= dat.loops) {
+					stop(dat)
+					if (dat.cbOnEnd) dat.cbOnEnd()
+				}
 			}
-			else stop(dat)
+			else {
+				stop(dat)
+				if (dat.cbOnEnd) dat.cbOnEnd()
+			}
 		}
 	}
 }
@@ -51,9 +63,34 @@ export async function initContext(dat) {
 export async function play(dat, loops) { // use loops < 0 for infinite looping or until stop() is called
 	dat.loops = loops
 	dat.looped = 0
+	dat.paused = false
+	dat.currentTime = 0
 	dat.aw.port.postMessage({ch:dat.ch})
 }
 
 export function stop(dat) {
-	if (dat.aw && dat.ctx && dat.ctx.state !== 'closed') dat.ctx.close()
+	dat.paused = false
+	if (dat.ctx && dat.ctx.state !== 'closed') dat.ctx.close()
+}
+
+export function pause(dat) {
+	if (dat.ctx && dat.ctx.state === 'running') {
+		dat.paused = true
+		dat.ctx.suspend()
+	}
+}
+
+export function resume(dat) {
+	dat.paused = false
+	if (dat.ctx && dat.ctx.state === 'suspended') dat.ctx.resume()
+}
+
+export function getPosition(dat) {
+	return dat.currentTime
+}
+
+export function setPosition(dat, pos) {
+	if (dat.aw) {
+		dat.aw.port.postMessage({frame: Math.round(pos * dat.sampleRate)})
+	}
 }

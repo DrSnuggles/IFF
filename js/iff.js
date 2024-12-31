@@ -1,7 +1,7 @@
 /*  IFF tools by DrSnuggles
 	License : Public Domain
 
-	Actually recognized types: 8SVX, ILBM, 16SV, AIFF
+	Actually recognized types: ILBM, 8SVX, 16SV, AIFC, AIFF
 	https://wiki.amigaos.net/wiki/IFF_FORM_and_Chunk_Registry
 */
 
@@ -12,9 +12,11 @@ import {parse as parseSVX} from './svx.js'
 import {parse as parseAIFF} from './aiff.js'
 
 export class IFF {
-	constructor(co,cb) {
+	constructor(co,cbOnLoad,cbOnError,cbOnEnd) {
 		this.idx = 0
-		this.cb = cb
+		this.cbOnLoad = cbOnLoad
+		this.cbOnError = cbOnError
+		this.cbOnEnd = cbOnEnd // invoked from audio.js
 		if (typeof co == 'string') this.load(co)
 		if (typeof co == 'object') this.parse(co)
 	}
@@ -26,7 +28,10 @@ export class IFF {
 			log('File loaded')
 			this.parse(ab)
 		})
-		.catch(e => console.error(e))
+		.catch(e => {
+			if (this.cbOnError) this.cbOnError(e)
+			else console.error(e)
+		})
 	}
 	async parse(ab) {
 		this.dv = new DataView(ab)
@@ -35,11 +40,15 @@ export class IFF {
 		// If it doesn’t start with “FORM”, “LIST”, or “CAT ”, it’s not an IFF-85 file.
 		const group = getString(this, 4)
 		if (['FORM', 'LIST', 'CAT '].indexOf(group) === -1) {
-			log('This is not an IFF-85 file')
+			const msg = 'This is not an IFF-85 file.'
+			log(msg)
+			if (this.cbOnError) this.cbOnError(new Error(msg))
 			return
 		}
 		if (group !== 'FORM') {
-			log('Only FORM group is supported')
+			const msg = 'Only FORM group is supported.'
+			log(msg)
+			if (this.cbOnError) this.cbOnError(new Error(msg))
 			return
 		}
 		this.group = group
@@ -77,7 +86,7 @@ export class IFF {
 			default:
 		}
 
-		this.cb()	// we are done.. callback
+		this.cbOnLoad()	// we are done.. callback
 	}
 }
 
