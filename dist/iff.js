@@ -687,9 +687,12 @@ async function initContext(dat) {
 		}
 	}
 
+	dat.duration = dat.ch.length > 0 ? (dat.ch[0].length / dat.sampleRate) : 0;
+	log('duration in seconds: '+ dat.duration);
+
 	// Worker
 	//await dat.ctx.audioWorklet.addModule( new URL('audioWorklet.js', import.meta.url) )
-	await dat.ctx.audioWorklet.addModule(URL.createObjectURL( new Blob(['class BufferPlayer extends AudioWorkletProcessor{constructor(){super(),this.port.onmessage=this.handleMessage_.bind(this),this.ch=[],this.frame=0}process(e,s,r){if(0==this.ch.length)return!0;if(-1==this.frame)return!0;for(let e=0;e<s[0][0].length;e++){for(let r=0;r<s[0].length;r++)s[0][r][e]=this.ch[r][this.frame];this.frame++,this.frame>=this.ch[0].length&&(this.frame=-1,this.port.postMessage({pos:-1}))}return!0}handleMessage_(e){e.data.ch&&(this.ch=e.data.ch)}}registerProcessor("bufferplayer-processor",BufferPlayer)'], {type: "application/javascript"}) ));
+	await dat.ctx.audioWorklet.addModule(URL.createObjectURL( new Blob(['class BufferPlayer extends AudioWorkletProcessor{constructor(){super(),this.port.onmessage=this.handleMessage_.bind(this),this.ch=[],this.frame=0}process(e,r,s){if(0==this.ch.length)return!0;if(-1==this.frame)return!0;for(let e=0;e<r[0][0].length;e++){for(let s=0;s<r[0].length;s++)r[0][s][e]=this.ch[s][this.frame];this.frame++,this.frame>=this.ch[0].length&&(this.frame=-1),this.port.postMessage({frame:this.frame})}return!0}handleMessage_(e){e.data.ch&&(this.ch=e.data.ch),e.data.frame>=0&&(this.frame=e.data.frame)}}registerProcessor("bufferplayer-processor",BufferPlayer)'], {type: "application/javascript"}) ));
 
 	dat.aw = new AudioWorkletNode(dat.ctx, 'bufferplayer-processor', {
 		numberOfInputs: 0,
@@ -699,16 +702,59 @@ async function initContext(dat) {
 	dat.aw.connect(dat.ctx.destination);	// connect to output
 	dat.aw.port.onmessage = (msg) => {
 		//console.log('Message from audioWorklet worker', msg)
-		if (msg.data.pos == -1) stop(dat);
+		if (msg.data.frame >= 0) {
+			dat.currentTime = msg.data.frame / dat.sampleRate;
+		}
+		else if (msg.data.frame == -1) {
+			if (dat.loops) {
+				dat.looped++;
+				log('looped: ' + dat.looped + ' of ' + (dat.loops < 0 ? 'infinite (until stop() is called)' : dat.loops));
+				if (dat.loops >= 0 && dat.looped >= dat.loops) {
+					stop(dat);
+					if (dat.cbOnEnd) dat.cbOnEnd();
+				}
+			}
+			else {
+				stop(dat);
+				if (dat.cbOnEnd) dat.cbOnEnd();
+			}
+		}
 	};
 }
 
-async function play(dat) {
+async function play(dat, loops) { // use loops < 0 for infinite looping or until stop() is called
+	dat.loops = loops;
+	dat.looped = 0;
+	dat.paused = false;
+	dat.currentTime = 0;
 	dat.aw.port.postMessage({ch:dat.ch});
 }
 
 function stop(dat) {
-	if (dat.aw) dat.ctx.close();
+	dat.paused = false;
+	if (dat.ctx && dat.ctx.state !== 'closed') dat.ctx.close();
+}
+
+function pause(dat) {
+	if (dat.ctx && dat.ctx.state === 'running') {
+		dat.paused = true;
+		dat.ctx.suspend();
+	}
+}
+
+function resume(dat) {
+	dat.paused = false;
+	if (dat.ctx && dat.ctx.state === 'suspended') dat.ctx.resume();
+}
+
+function getPosition(dat) {
+	return dat.currentTime
+}
+
+function setPosition(dat, pos) {
+	if (dat.aw) {
+		dat.aw.port.postMessage({frame: Math.round(pos * dat.sampleRate)});
+	}
 }
 
 /*	IFF 8SVX / 16SV by DrSnuggles
@@ -720,7 +766,9 @@ async function parse$1(dat) {
 	// read next chunk, needs to be VHDR
 	let chunk = readChunk(dat);
 	if (chunk.name !== 'VHDR') {
-		log('Missing VHDR chunk. This is not a valid SVX file');
+		const msg = 'Missing VHDR chunk. This is not a valid SVX file.';
+		log(msg);
+		if (dat.cbOnError) dat.cbOnError(new Error(msg));
 		return
 	}
 	log('VHDR chunk size: '+ chunk.size);
@@ -868,8 +916,12 @@ async function parse$1(dat) {
 	prepareChannels(dat);
 	await initContext(dat);
 
-	dat.play = () => { play(dat); };
+	dat.play = (loops) => { play(dat, loops); };
 	dat.stop = () => { stop(dat); };
+	dat.pause = () => { pause(dat); };
+	dat.resume = () => { resume(dat); };
+	dat.getPosition = () => { return getPosition(dat) };
+	dat.setPosition = (pos) => { setPosition(dat, pos); };
 }
 
 function prepareChannels(dat) {
@@ -4111,15 +4163,21 @@ async function parse$2(dat) {
 
 	}
 	if (!dat.comm) {
-		log('Missing COMM chunk. This is not a valid AIFF file');
+		const msg = 'Missing COMM chunk. This is not a valid AIFF file.';
+		log(msg);
+		if (dat.cbOnError) dat.cbOnError(new Error(msg));
 		return
 	}
 
 	prepareChannels$1(dat);
 	await initContext(dat);
 
-	dat.play = () => { play(dat); };
+	dat.play = (loops) => { play(dat, loops); };
 	dat.stop = () => { stop(dat); };
+	dat.pause = () => { pause(dat); };
+	dat.resume = () => { resume(dat); };
+	dat.getPosition = () => { return getPosition(dat) };
+	dat.setPosition = (pos) => { setPosition(dat, pos); };
 }
 
 function prepareChannels$1(dat) {
@@ -4154,14 +4212,16 @@ function getIEEE754(dat) {
 /*  IFF tools by DrSnuggles
 	License : Public Domain
 
-	Actually recognized types: 8SVX, ILBM, 16SV, AIFF
+	Actually recognized types: ILBM, 8SVX, 16SV, AIFC, AIFF
 	https://wiki.amigaos.net/wiki/IFF_FORM_and_Chunk_Registry
 */
 
 class IFF {
-	constructor(co,cb) {
+	constructor(co,cbOnLoad,cbOnError,cbOnEnd) {
 		this.idx = 0;
-		this.cb = cb;
+		this.cbOnLoad = cbOnLoad;
+		this.cbOnError = cbOnError;
+		this.cbOnEnd = cbOnEnd; // invoked from audio.js
 		if (typeof co == 'string') this.load(co);
 		if (typeof co == 'object') this.parse(co);
 	}
@@ -4173,7 +4233,10 @@ class IFF {
 			log('File loaded');
 			this.parse(ab);
 		})
-		.catch(e => console.error(e));
+		.catch(e => {
+			if (this.cbOnError) this.cbOnError(e);
+			else console.error(e);
+		});
 	}
 	async parse(ab) {
 		this.dv = new DataView(ab);
@@ -4182,11 +4245,15 @@ class IFF {
 		// If it doesn’t start with “FORM”, “LIST”, or “CAT ”, it’s not an IFF-85 file.
 		const group = getString(this, 4);
 		if (['FORM', 'LIST', 'CAT '].indexOf(group) === -1) {
-			log('This is not an IFF-85 file');
+			const msg = 'This is not an IFF-85 file.';
+			log(msg);
+			if (this.cbOnError) this.cbOnError(new Error(msg));
 			return
 		}
 		if (group !== 'FORM') {
-			log('Only FORM group is supported');
+			const msg = 'Only FORM group is supported.';
+			log(msg);
+			if (this.cbOnError) this.cbOnError(new Error(msg));
 			return
 		}
 		this.group = group;
@@ -4223,7 +4290,7 @@ class IFF {
 				break
 		}
 
-		this.cb();	// we are done.. callback
+		this.cbOnLoad();	// we are done.. callback
 	}
 }
 
