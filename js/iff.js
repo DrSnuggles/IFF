@@ -10,6 +10,7 @@ import {getString, getUint32} from './readChunk.js'
 import {parse as parseILBM} from './ilbm.js'
 import {parse as parseSVX} from './svx.js'
 import {parse as parseAIFF} from './aiff.js'
+import {parse as parsePREF} from './pref.js'
 
 export class IFF {
 	constructor(co,cbOnLoad,cbOnError,cbOnEnd) {
@@ -83,7 +84,11 @@ export class IFF {
 				//await parseAIFF.parse(this)
 				await parseAIFF(this)
 				break
+			case 'PREF':
+				await parsePREF(this)
+				break
 			default:
+				console.log('Not yet supported type: '+ this.subType)
 		}
 
 		this.cbOnLoad()	// we are done.. callback

@@ -37,7 +37,7 @@ Thanks to mrupp the creator of https://TAWS.ch there is now also support for ste
 - https://www-mmsp.ece.mcgill.ca/Documents/AudioFormats/AIFF/Docs/AIFF-1.3.pdf
 - https://github.com/brianmhunt/float80
 
-### Next steps: AIFF-C
+### AIFF-C
 - https://www-mmsp.ece.mcgill.ca/Documents/AudioFormats/AIFF/Docs/AIFF-C.9.26.91.pdf
 - https://github.com/rochars/alawmulaw
 
@@ -48,6 +48,9 @@ Thanks to mrupp the creator of https://TAWS.ch there is now also support for ste
     - ADPCM3
 	- A LAW
 	- mu LAW
+
+### PREFS
+Read Palette out of Amiga prefs files
 
 ## Copyright / License
 Multiple, see single files for information.
