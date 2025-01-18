@@ -766,9 +766,7 @@ async function parse$1(dat) {
 	// read next chunk, needs to be VHDR
 	let chunk = readChunk(dat);
 	if (chunk.name !== 'VHDR') {
-		const msg = 'Missing VHDR chunk. This is not a valid SVX file.';
-		log(msg);
-		if (dat.cbOnError) dat.cbOnError(new Error(msg));
+    dat.handleError('Missing VHDR chunk. This is not a valid SVX file.');
 		return
 	}
 	log('VHDR chunk size: '+ chunk.size);
@@ -4163,9 +4161,7 @@ async function parse$2(dat) {
 
 	}
 	if (!dat.comm) {
-		const msg = 'Missing COMM chunk. This is not a valid AIFF file.';
-		log(msg);
-		if (dat.cbOnError) dat.cbOnError(new Error(msg));
+    dat.handleError('Missing COMM chunk. This is not a valid AIFF file.');
 		return
 	}
 
@@ -4218,9 +4214,7 @@ async function parse$3(dat) {
 	// read next chunk, needs to be PRHD
 	let chunk = readChunk(dat);
 	if (chunk.name !== 'PRHD') {
-		const msg = 'Missing PRHD chunk. This is not a valid PREF file.';
-		log(msg);
-		if (dat.cbOnError) dat.cbOnError(new Error(msg));
+    dat.handleError('Missing PRHD chunk. This is not a valid PREF file.');
 		return
 	}
 	log('PRHD chunk size: '+ chunk.size);
@@ -4351,15 +4345,11 @@ class IFF {
 		// If it doesn’t start with “FORM”, “LIST”, or “CAT ”, it’s not an IFF-85 file.
 		const group = getString(this, 4);
 		if (['FORM', 'LIST', 'CAT '].indexOf(group) === -1) {
-			const msg = 'This is not an IFF-85 file.';
-			log(msg);
-			if (this.cbOnError) this.cbOnError(new Error(msg));
+			this.handleError('This is not an IFF-85 file.');
 			return
 		}
 		if (group !== 'FORM') {
-			const msg = 'Only FORM group is supported.';
-			log(msg);
-			if (this.cbOnError) this.cbOnError(new Error(msg));
+			this.handleError('Only FORM group is supported.');
 			return
 		}
 		this.group = group;
@@ -4402,6 +4392,15 @@ class IFF {
 		}
 
 		this.cbOnLoad();	// we are done.. callback
+	}
+	handleError(msg) {
+		log(msg);
+		if (this.cbOnError) {
+			const err = typeof(msg) === 'object' ? msg : new Error(msg);
+			err.sender = this;
+			this.cbOnError(err);
+		}
+		else console.error(msg);
 	}
 }
 

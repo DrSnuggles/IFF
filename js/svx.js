@@ -12,9 +12,7 @@ export async function parse(dat) {
 	// read next chunk, needs to be VHDR
 	let chunk = readChunk(dat)
 	if (chunk.name !== 'VHDR') {
-		const msg = 'Missing VHDR chunk. This is not a valid SVX file.'
-		log(msg)
-		if (dat.cbOnError) dat.cbOnError(new Error(msg))
+    dat.handleError('Missing VHDR chunk. This is not a valid SVX file.')
 		return
 	}
 	log('VHDR chunk size: '+ chunk.size)

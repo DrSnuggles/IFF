@@ -9,9 +9,7 @@ export async function parse(dat) {
 	// read next chunk, needs to be PRHD
 	let chunk = readChunk(dat)
 	if (chunk.name !== 'PRHD') {
-		const msg = 'Missing PRHD chunk. This is not a valid PREF file.'
-		log(msg)
-		if (dat.cbOnError) dat.cbOnError(new Error(msg))
+    dat.handleError('Missing PRHD chunk. This is not a valid PREF file.')
 		return
 	}
 	log('PRHD chunk size: '+ chunk.size)
