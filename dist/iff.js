@@ -4334,8 +4334,7 @@ class IFF {
 			this.parse(ab);
 		})
 		.catch(e => {
-			if (this.cbOnError) this.cbOnError(e);
-			else console.error(e);
+			this.handleError(e);
 		});
 	}
 	async parse(ab) {
