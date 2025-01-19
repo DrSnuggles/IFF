@@ -96,9 +96,7 @@ export async function parse(dat) {
 
 	}
 	if (!dat.comm) {
-		const msg = 'Missing COMM chunk. This is not a valid AIFF file.'
-		log(msg)
-		if (dat.cbOnError) dat.cbOnError(new Error(msg))
+    dat.handleError('Missing COMM chunk. This is not a valid AIFF file.')
 		return
 	}
 

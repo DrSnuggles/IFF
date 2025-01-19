@@ -766,9 +766,7 @@ async function parse$1(dat) {
 	// read next chunk, needs to be VHDR
 	let chunk = readChunk(dat);
 	if (chunk.name !== 'VHDR') {
-		const msg = 'Missing VHDR chunk. This is not a valid SVX file.';
-		log(msg);
-		if (dat.cbOnError) dat.cbOnError(new Error(msg));
+    dat.handleError('Missing VHDR chunk. This is not a valid SVX file.');
 		return
 	}
 	log('VHDR chunk size: '+ chunk.size);
@@ -4163,9 +4161,7 @@ async function parse$2(dat) {
 
 	}
 	if (!dat.comm) {
-		const msg = 'Missing COMM chunk. This is not a valid AIFF file.';
-		log(msg);
-		if (dat.cbOnError) dat.cbOnError(new Error(msg));
+    dat.handleError('Missing COMM chunk. This is not a valid AIFF file.');
 		return
 	}
 
@@ -4218,9 +4214,7 @@ async function parse$3(dat) {
 	// read next chunk, needs to be PRHD
 	let chunk = readChunk(dat);
 	if (chunk.name !== 'PRHD') {
-		const msg = 'Missing PRHD chunk. This is not a valid PREF file.';
-		log(msg);
-		if (dat.cbOnError) dat.cbOnError(new Error(msg));
+    dat.handleError('Missing PRHD chunk. This is not a valid PREF file.');
 		return
 	}
 	log('PRHD chunk size: '+ chunk.size);
@@ -4245,7 +4239,9 @@ async function parse$3(dat) {
 				*/
 				dat.PALT = {
 					asso: [],	// list 2
-					cols: {},	// list 3
+					cols: [],	// list 3
+					map: {},
+					mapCols: {}
 				};
 				let nextWord = getInt16(dat);
 				while (nextWord != -1) {	// list 1 unidentified
@@ -4273,21 +4269,32 @@ async function parse$3(dat) {
 					nextWord = getInt16(dat);
 				}
 				log( 'Colors: '+ JSON.stringify(dat.PALT.cols) );
+				// create a mapping table from asso
+				const names = ['background','text','brightEdges','darkEdges','activeWindowTitleBars','activeWindowTitles','','importantText','menuText','menuBackground','menuDarkEdges','menuBrightEdges'];
+				for (let i = 0; i < dat.PALT.asso.length && i < names.length; i++) {
+					if (names[i]) {
+						dat.PALT.map[names[i]] = dat.PALT.asso[i];
+						if (dat.PALT.asso[i] < dat.PALT.cols.length) dat.PALT.mapCols[names[i]] = dat.PALT.cols[dat.PALT.asso[i]];
+					}
+				}
+				log( 'Mapping indexes: '+ JSON.stringify(dat.PALT.map) );
+				log( 'Mapping colors: '+ JSON.stringify(dat.PALT.mapCols) );
+				// look for OS4 colors
 				if (chunk.size > 400) {	// Thats OS4
-					dat.PALT.os4cols = {};		// list 4
-					dat.PALT.os4colsEna = {};	// list 5
+					dat.PALT.os4cols = [];		// list 4
+					dat.PALT.os4colsEna = [];	// list 5
 					dat.idx = chunkStart + 400;	
 					let i = 0;
 					while (i < 256) {	// list 4 OS4 colors
 						//console.log('list4')
-						dat.PALT.os4cols[i] = '#'+ getUint8(dat).toString(16).padStart(2,0) + getUint8(dat).toString(16).padStart(2,0) + getUint8(dat).toString(16).padStart(2,0);
+						dat.PALT.os4cols.push('#'+ getUint8(dat).toString(16).padStart(2,0) + getUint8(dat).toString(16).padStart(2,0) + getUint8(dat).toString(16).padStart(2,0));
 						i++;
 					}
 					log( 'OS4 Colors: '+ JSON.stringify(dat.PALT.os4cols) );
 					i = 0;
 					while (i < 256) {	// list 5 OS4 colors enabled or not
 						//console.log('list4')
-						dat.PALT.os4colsEna[i] = (getUint8(dat) == 1);
+						dat.PALT.os4colsEna.push((getUint8(dat) == 1));
 						i++;
 					}
 					log( 'OS4 Color enabled: '+ JSON.stringify(dat.PALT.os4colsEna) );
@@ -4327,8 +4334,7 @@ class IFF {
 			this.parse(ab);
 		})
 		.catch(e => {
-			if (this.cbOnError) this.cbOnError(e);
-			else console.error(e);
+			this.handleError(e);
 		});
 	}
 	async parse(ab) {
@@ -4338,15 +4344,11 @@ class IFF {
 		// If it doesn’t start with “FORM”, “LIST”, or “CAT ”, it’s not an IFF-85 file.
 		const group = getString(this, 4);
 		if (['FORM', 'LIST', 'CAT '].indexOf(group) === -1) {
-			const msg = 'This is not an IFF-85 file.';
-			log(msg);
-			if (this.cbOnError) this.cbOnError(new Error(msg));
+			this.handleError('This is not an IFF-85 file.');
 			return
 		}
 		if (group !== 'FORM') {
-			const msg = 'Only FORM group is supported.';
-			log(msg);
-			if (this.cbOnError) this.cbOnError(new Error(msg));
+			this.handleError('Only FORM group is supported.');
 			return
 		}
 		this.group = group;
@@ -4389,6 +4391,15 @@ class IFF {
 		}
 
 		this.cbOnLoad();	// we are done.. callback
+	}
+	handleError(msg) {
+		log(msg);
+		if (this.cbOnError) {
+			const err = typeof(msg) === 'object' ? msg : new Error(msg);
+			err.sender = this;
+			this.cbOnError(err);
+		}
+		else console.error(msg);
 	}
 }
 

@@ -30,8 +30,7 @@ export class IFF {
 			this.parse(ab)
 		})
 		.catch(e => {
-			if (this.cbOnError) this.cbOnError(e)
-			else console.error(e)
+			this.handleError(e)
 		})
 	}
 	async parse(ab) {
@@ -41,15 +40,11 @@ export class IFF {
 		// If it doesn’t start with “FORM”, “LIST”, or “CAT ”, it’s not an IFF-85 file.
 		const group = getString(this, 4)
 		if (['FORM', 'LIST', 'CAT '].indexOf(group) === -1) {
-			const msg = 'This is not an IFF-85 file.'
-			log(msg)
-			if (this.cbOnError) this.cbOnError(new Error(msg))
+			this.handleError('This is not an IFF-85 file.')
 			return
 		}
 		if (group !== 'FORM') {
-			const msg = 'Only FORM group is supported.'
-			log(msg)
-			if (this.cbOnError) this.cbOnError(new Error(msg))
+			this.handleError('Only FORM group is supported.')
 			return
 		}
 		this.group = group
@@ -92,6 +87,15 @@ export class IFF {
 		}
 
 		this.cbOnLoad()	// we are done.. callback
+	}
+	handleError(msg) {
+		log(msg)
+		if (this.cbOnError) {
+			const err = typeof(msg) === 'object' ? msg : new Error(msg)
+			err.sender = this
+			this.cbOnError(err)
+		}
+		else console.error(msg)
 	}
 }
 
