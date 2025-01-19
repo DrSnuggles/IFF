@@ -5,8 +5,5 @@
 		"gulp-terser": "^2.1.0",
 		"gulp-rename": "^2.0.0",
 		"gulp-brotli": "^3.0.0"
-	},
-	"dependencies": {
-		"rollup": "^1.4.1"
 	}
 }
