@@ -277,9 +277,12 @@ function showILBM(f, canv) {
 		f.bmhd.ratio = f.bmhd.xAspect / f.bmhd.yAspect
 	} else {
 		f.bmhd.ratio = 1
-	}
-	f.bmhd.eff_w = f.bmhd.w * Math.max(f.bmhd.ratio, 1)
-	f.bmhd.eff_h = f.bmhd.h / Math.min(f.bmhd.ratio, 1)
+}
+	// fixed by mrupp for his TAWS project
+	var ratioX = Math.ceil(f.bmhd.ratio) // must always be an integer
+	var ratioY = f.bmhd.xAspect / (ratioX * f.bmhd.yAspect) // calc ratioY according to ratioX
+	f.bmhd.eff_w = f.bmhd.w * ratioX
+	f.bmhd.eff_h = f.bmhd.h / ratioY
 
 	canv.width = f.bmhd.eff_w
 	canv.height = f.bmhd.eff_h
