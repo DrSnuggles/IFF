@@ -337,9 +337,10 @@ function resolveRGB24Pixel(value) {
 	/**
 	* Resolves a RGB24 encoded value into a correct color.
 	*/
-	var red = (value & 0xff0000) >> 16
-	var green = (value & 0xff00) >> 8
-	var blue = value & 0xff
+  // fixed by mrupp for his TAWS project
+  var red = value & 0xff;
+  var green = (value & 0xff00) >> 8;
+  var blue = (value & 0xff0000) >> 16;
 	return [red, green, blue, 255]
 }
 function resolvePixels(f, value, previous_color, lineNum, xPos) {
