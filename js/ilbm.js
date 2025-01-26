@@ -212,7 +212,12 @@ export async function parse(dat) {
 					*/
 				}
 				break
-			case 'DPI ':	// ToDo
+			case 'DPI ':
+				dat.dpi = {
+					x: getUint16(dat),
+					y: getUint16(dat)
+				}
+				break
 			case 'PCHG':	// ToDo
 			case 'PDDP':	// ToDo
 				dat.idx += chunk.size
