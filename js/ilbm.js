@@ -228,7 +228,13 @@ export async function parse(dat) {
 	}
 
 	// finally draw
-	dat.bmhd.pixBuf = bitPlaneToPixBuffer(dat)
+  // added PBM support by mrupp for his TAWS project
+  if (dat.subType === 'PBM ') {
+		dat.bmhd.pixBuf = dat.data
+  }
+  else {
+		dat.bmhd.pixBuf = bitPlaneToPixBuffer(dat)
+  }
 	//showILBM(pixBuf, w*xAspect, h*yAspect, document.getElementById('ILBMcanvas'))
 	//showILBM(dat, canv)
 
@@ -282,7 +288,7 @@ function showILBM(f, canv) {
 		f.bmhd.ratio = f.bmhd.xAspect / f.bmhd.yAspect
 	} else {
 		f.bmhd.ratio = 1
-}
+	}
 	// fixed by mrupp for his TAWS project
 	var ratioX = Math.ceil(f.bmhd.ratio) // must always be an integer
 	var ratioY = f.bmhd.xAspect / (ratioX * f.bmhd.yAspect) // calc ratioY according to ratioX
@@ -302,6 +308,7 @@ function showILBM(f, canv) {
 	var color = [0, 0, 0, 255]//iff.black_color
 	while (idx < f.bmhd.pixBuf.length) {
 		var value = f.bmhd.pixBuf[idx]
+		if (value < 0) value += 256 // fix for negative values
 		//if (idx % f.bmhd.w == 0) lineStart(f, Math.floor(idx / f.bmhd.w))	// call copper ;)
 		color = resolvePixels(f, value, color, Math.floor(idx / f.bmhd.w), (idx % f.bmhd.w))
 		for (let c = 0; c < 4; c++) {

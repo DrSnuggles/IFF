@@ -59,6 +59,7 @@ export class IFF {
 
 		switch (this.subType) {
 			case 'ILBM':	// Image
+			case 'PBM ':	// Image
 				//if (typeof parseILBM == 'undefined') window.parseILBM = await import('./ilbm.js')
 				//await parseILBM.parse(this)
 				await parseILBM(this)
