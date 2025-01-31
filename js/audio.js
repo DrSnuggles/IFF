@@ -74,7 +74,8 @@ export function stop(dat) {
 }
 
 export function pause(dat) {
-	if (dat.ctx && dat.ctx.state === 'running') {
+	if (dat.paused) resume(dat)
+	else if (dat.ctx && dat.ctx.state === 'running') {
 		dat.paused = true
 		dat.ctx.suspend()
 	}
