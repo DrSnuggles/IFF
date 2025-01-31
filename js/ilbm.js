@@ -1,5 +1,6 @@
 /*  IFF ILBM by DrSnuggles with adapted
 		canvas drawing by Matthias Wiesmann
+		with some enhancements by Michael Rupp for his TAWS project
 
 		Copyright © 2012, Matthias Wiesmann
 		All rights reserved.
@@ -17,6 +18,9 @@ import {unpack_ByteRun1} from './unpackers/byteRun1.js'
 export async function parse(dat) {
 	dat.ctbl = false
 	dat.sham = false
+	dat.color_animations = []
+	dat.colorCycling = false
+	dat.colorCyclingPaused = false
 
 	// read chunks
 	while (dat.idx < dat.dv.byteLength -8) {	// -8 = ChunkName + ChunkSize
@@ -143,6 +147,27 @@ export async function parse(dat) {
 					tmp.push( getUint8(dat) )
 				}
 				dat.crng.push( tmp )
+
+				dat.idx -= chunk.size - 2
+				var animation = {rate: getUint16(dat)}
+				var flags = getUint16(dat)
+				animation.active = !!animation.rate && (flags & 1) // rate == 0 --> deactivate
+				animation.reverse = flags & 2
+				animation.timestamp = 0
+				animation.delay_sec = animation.rate ? (16384 / (animation.rate * 50)) : 0 // 50 Hz for PAL
+				animation.lower = getUint8(dat)
+				animation.upper = getUint8(dat)
+				log('Animation active: ' + animation.active)
+				if (animation.active) {
+					log('Animation n°' + dat.color_animations.length)
+					log('Rate: ' + animation.rate + ' (' + animation.delay_sec.toFixed(2) + ')')
+					log('Range: x' + animation.lower.toString(16) + ' -> x' + animation.upper.toString(16))
+					log('Reverse: ' + Boolean(animation.reverse))
+					dat.color_animations.push(animation)
+					for (var i = animation.lower; i <= animation.upper; i++) {
+						dat.cmap_overlay[i] = i
+					}
+				}
 				break
 			case 'CTBL':	// Color TaBLe
 				log('CTBL chunk size: '+ chunk.size)
@@ -239,6 +264,10 @@ export async function parse(dat) {
 	//showILBM(dat, canv)
 
 	dat.show = (canv) => { showILBM(dat, canv) }
+	dat.play = () => { startColorCycling(dat) }
+	dat.stop = () => { stopColorCycling(dat) }
+	dat.pause = () => { pauseColorCycling(dat) }
+	dat.resume = () => { resumeColorCycling(dat) }
 }
 
 function padTo8bits(value, bits) {
@@ -299,10 +328,10 @@ function showILBM(f, canv) {
 	canv.height = f.bmhd.eff_h
 
 	/* offline canvas */
-	var render_canvas = document.createElement('canvas')
-	render_canvas.width = f.bmhd.w
-	render_canvas.height = f.bmhd.h
-	var render_ctx = render_canvas.getContext('2d')
+	f.render_canvas = document.createElement('canvas')
+	f.render_canvas.width = f.bmhd.w
+	f.render_canvas.height = f.bmhd.h
+	var render_ctx = f.render_canvas.getContext('2d')
 	var target = render_ctx.createImageData(f.bmhd.w, f.bmhd.h)
 	var idx = 0
 	var color = [0, 0, 0, 255]//iff.black_color
@@ -319,11 +348,10 @@ function showILBM(f, canv) {
 	render_ctx.putImageData(target, 0, 0)
 
 	/* Now render the image into the effective display target, with effective sizes */
-	var ctx = canv.getContext('2d')
-	ctx.drawImage(render_canvas, 0, 0, f.bmhd.w, f.bmhd.h, 0, 0, f.bmhd.eff_w, f.bmhd.eff_h)
+	f.display_ctx = canv.getContext('2d')
+	f.display_ctx.drawImage(f.render_canvas, 0, 0, f.bmhd.w, f.bmhd.h, 0, 0, f.bmhd.eff_w, f.bmhd.eff_h)
 }
 function resolveHAMPixel(iff, value, previous_color) {
-	//console.log('resolveHAMPixel')
 	/**
 	* Resolves a HAM encoded value into the correct color.
 	* This assumes the color-table has been properly culled.
@@ -445,9 +473,7 @@ function bitPlaneToPixBuffer(f) {
 	var row_bytes = ((f.bmhd.w + 15) >> 4) << 1
 	var ret = new Array(f.bmhd.w * f.bmhd.h).fill(0)
 	var planes = f.bmhd.nPlanes
-	if (f.bmhd.masking == 1) {
-		planes += 1
-	}
+	if (f.bmhd.masking == 1) planes += 1
 	for (let y = 0; y < f.bmhd.h; y++) {
 		for (let p = 0; p < planes; p++) {
 			var plane_mask = 1 << p
@@ -465,4 +491,122 @@ function bitPlaneToPixBuffer(f) {
 		}
 	}
 	return ret
+}
+function startColorCycling(iff) {
+	if (!iff.render_canvas) {
+		iff.handleError('Canvas not initialized. Call "show(canvas)" first!')
+		return
+	}
+	if (iff.color_animations.length > 0) {
+		iff.colorCycling = true
+		if (iff.colorCyclingPaused) {
+			iff.colorCyclingPaused = false
+			animateIffImage(iff, true) // resets the color overlay
+		}
+		animateIffImage(iff)
+	}
+	return iff.colorCycling
+}
+function pauseColorCycling(iff) {
+	if (iff.color_animations.length > 0 && iff.render_canvas) {
+		if (iff.colorCycling) {
+			iff.colorCycling = false
+			iff.colorCyclingPaused = true
+		}
+		else {
+			resumeColorCycling(iff)
+		}
+	}
+}
+function resumeColorCycling(iff) {
+	if (iff.color_animations.length > 0 && !iff.colorCycling && iff.colorCyclingPaused) {
+		iff.colorCyclingPaused = false
+		startColorCycling(iff)
+	}
+}
+function stopColorCycling(iff) {
+	if (iff.color_animations.length > 0 && iff.render_canvas) {
+		iff.colorCyclingPaused = false
+		iff.colorCycling = false
+		animateIffImage(iff, true) // resets the color overlay
+	}
+}
+function animateIffImage(iff, reset) {
+	/**
+	 * Animate the image.
+	 */
+  var did_update = reset ? resetColorOverLay(iff) : updateColorOverLay(iff)
+  if (did_update) {
+    var render_ctx = iff.render_canvas.getContext("2d")
+    var target = render_ctx.getImageData(0, 0, iff.bmhd.w, iff.bmhd.h)
+    /* Try to minimize the area that needs to be copied back on screen */
+    var dirty_x1 = iff.bmhd.w
+    var dirty_y1 = iff.bmhd.h
+    var dirty_x2 = 0
+    var dirty_y2 = 0
+    for (var y = 0; y < iff.bmhd.h; y++) {
+      for (var x = 0; x < iff.bmhd.w; x++) {
+        var in_offset = y * iff.bmhd.w + x
+        var out_offset = y * iff.bmhd.w + x
+        var value = iff.bmhd.pixBuf[in_offset]
+        var color = resolveOverlayPixels(iff, value)
+        if (color != undefined) {
+          for (var c = 0; c < 3; c++) {
+            var new_color = color[c]
+            target.data[out_offset * 4 + c] = new_color
+          }
+          dirty_x1 = Math.min(dirty_x1, x)
+          dirty_y1 = Math.min(dirty_y2, y)
+          dirty_x2 = Math.max(dirty_x2, 0)
+          dirty_y2 = Math.max(dirty_y2, 0)
+        }
+      }
+    }
+    var dirty_width = iff.bmhd.w - dirty_x2
+    var dirty_height = iff.bmhd.h - dirty_y2
+    render_ctx.putImageData(target, 0, 0, dirty_x1, dirty_y1, dirty_width, dirty_height)
+    iff.display_ctx.drawImage(iff.render_canvas, 0, 0, iff.bmhd.w, iff.bmhd.h, 0, 0, iff.bmhd.eff_w, iff.bmhd.eff_h)
+  }
+  if (iff.colorCycling && !reset) {
+    window.requestAnimFrame(function () { animateIffImage(iff) })
+  }
+}
+function updateColorOverLay(iff) {
+	/**
+	 * Updates the indirection overlay used to handle color palette animations.
+	 */
+	var now = new Date().getTime()
+  var did_update = false
+  for (var i = 0; i < iff.color_animations.length; i++) {
+    var animation = iff.color_animations[i]
+    var delay = animation.delay_sec * 1000
+    if (now - animation.timestamp < delay)
+			continue
+    animation.timestamp = now
+    did_update = true
+    var increment = -1
+    if (animation.reverse == 2) increment = 1
+    var diff = animation.upper - animation.lower + 1
+    for (var j = animation.lower; j <= animation.upper; j++) {
+      var value = iff.cmap_overlay[j] + increment
+      if (value >= animation.upper) value -= diff
+      if (value < animation.lower) value += diff
+      iff.cmap_overlay[j] = value
+    }
+  }
+  return did_update
+}
+function resetColorOverLay(iff) {
+	/**
+	 * Resets the overlay used to handle color palette animations to its initial state.
+	 */
+	var now = new Date().getTime()
+  for (var i = 0; i < iff.color_animations.length; i++) {
+    var animation = iff.color_animations[i]
+    animation.timestamp = now
+    for (var j = animation.lower; j <= animation.upper; j++) {
+      iff.cmap_overlay[j] = j
+    }
+  }
+  return true
 }

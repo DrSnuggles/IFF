@@ -111,8 +111,11 @@
 		</optgroup>
 	</select>
 	<button onclick="newIFF(testselect.value)">Load</button>
-	AntiAlias<input type="checkbox" id="cb_alias" onchange="toggleAlias()">
-	<input type="checkbox" id="cb_size" onchange="toggleSize()">Original size
+	<input type="checkbox" id="cb_alias" onchange="toggleAlias()"><label for="cb_alias">AntiAlias</label>
+	<input type="checkbox" id="cb_size" onchange="toggleSize()"><label for="cb_size">Original size</label>
+	<button id="btn_play" disabled="true" onclick="myIFFObject.play()">Play</button>
+	<button id="btn_pause" disabled="true" onclick="myIFFObject.pause()">Pause</button>
+	<button id="btn_stop" disabled="true" onclick="myIFFObject.stop()">Stop</button>
 	<div id="info">Drop your own files here<br/></div>
 
 	<!-- canvas for ILBM -->
@@ -120,12 +123,26 @@
 
 	<!-- how to use -->
 	<script>
+	let myIFFObject;
 	function newIFF(v) {	// v can be URL or ArrayBuffer
 		info.innerHTML = ''
-		let myIFFObject = new IFF(v, ()=> {
+
+		if (myIFFObject && myIFFObject.stop) myIFFObject.stop()
+
+		myIFFObject = new IFF(v, ()=> {
 			console.log(myIFFObject)
 
-			// now do what you want with it, eg play
+			const ilbmWithoutColorAnims = myIFFObject.color_animations && !myIFFObject.color_animations.length
+			document.getElementById('btn_play').disabled = !myIFFObject.play || ilbmWithoutColorAnims
+			document.getElementById('btn_pause').disabled = !myIFFObject.pause || ilbmWithoutColorAnims
+			document.getElementById('btn_stop').disabled = !myIFFObject.stop || ilbmWithoutColorAnims
+
+			// now do what you want with it, eg show
+			if (myIFFObject.show) {
+				myIFFObject.show(ILBMcanvas)
+			}
+
+			// or play audio
 			if (myIFFObject.play) {
 				myIFFObject.play()
 
@@ -135,11 +152,6 @@
 					myIFFObject.stop()
 				},1000)
 				*/
-			}
-
-			// or show an image
-			if (myIFFObject.show) {
-				myIFFObject.show(ILBMcanvas)
 			}
 		})
 	}
