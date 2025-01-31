@@ -113,6 +113,7 @@
 	<button onclick="newIFF(testselect.value)">Load</button>
 	<input type="checkbox" id="cb_alias" onchange="toggleAlias()"><label for="cb_alias">AntiAlias</label>
 	<input type="checkbox" id="cb_size" onchange="toggleSize()"><label for="cb_size">Original size</label>
+	<input type="checkbox" id="cb_trans" onchange="toggleTransparency()"><label for="cb_trans">Transparency</label>
 	<button id="btn_play" disabled="true" onclick="myIFFObject.play()">Play</button>
 	<button id="btn_pause" disabled="true" onclick="myIFFObject.pause()">Pause</button>
 	<button id="btn_stop" disabled="true" onclick="myIFFObject.stop()">Stop</button>
@@ -133,16 +134,16 @@
 			console.log(myIFFObject)
 
 			const ilbmWithoutColorAnims = myIFFObject.color_animations && !myIFFObject.color_animations.length
-			document.getElementById('btn_play').disabled = !myIFFObject.play || ilbmWithoutColorAnims
-			document.getElementById('btn_pause').disabled = !myIFFObject.pause || ilbmWithoutColorAnims
-			document.getElementById('btn_stop').disabled = !myIFFObject.stop || ilbmWithoutColorAnims
+			btn_play.disabled = !myIFFObject.play || ilbmWithoutColorAnims
+			btn_pause.disabled = !myIFFObject.pause || ilbmWithoutColorAnims
+			btn_stop.disabled = !myIFFObject.stop || ilbmWithoutColorAnims
 
 			// now do what you want with it, eg show
 			if (myIFFObject.show) {
-				myIFFObject.show(ILBMcanvas)
+				myIFFObject.show(ILBMcanvas, cb_trans.checked)
 			}
 
-			// or play audio
+			// or play audio or color cycling
 			if (myIFFObject.play) {
 				myIFFObject.play()
 
@@ -160,6 +161,11 @@
 	}
 	function toggleSize() {
 		(cb_size.checked) ? ILBMcanvas.classList.remove("scale") : ILBMcanvas.classList.add("scale")
+	}
+	function toggleTransparency() {
+		if (myIFFObject && myIFFObject.show) {
+			myIFFObject.show(ILBMcanvas, cb_trans.checked)
+		}
 	}
 	</script>
 

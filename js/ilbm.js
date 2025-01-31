@@ -21,6 +21,7 @@ export async function parse(dat) {
 	dat.color_animations = []
 	dat.colorCycling = false
 	dat.colorCyclingPaused = false
+	dat.transparency = false
 
 	// read chunks
 	while (dat.idx < dat.dv.byteLength -8) {	// -8 = ChunkName + ChunkSize
@@ -263,7 +264,7 @@ export async function parse(dat) {
 	//showILBM(pixBuf, w*xAspect, h*yAspect, document.getElementById('ILBMcanvas'))
 	//showILBM(dat, canv)
 
-	dat.show = (canv) => { showILBM(dat, canv) }
+	dat.show = (canv, transparency) => { showILBM(dat, canv, transparency) }
 	dat.play = () => { startColorCycling(dat) }
 	dat.stop = () => { stopColorCycling(dat) }
 	dat.pause = () => { pauseColorCycling(dat) }
@@ -311,7 +312,9 @@ function scaleCMAP(f) {
 	}
 	log('CMAP scaled')
 }
-function showILBM(f, canv) {
+function showILBM(f, canv, transparency) {
+	f.transparency = !!transparency
+
 	if (f.bmhd.yAspect != 0) {
 		/* some Atari files do not set the aspect fields */
 		f.bmhd.ratio = f.bmhd.xAspect / f.bmhd.yAspect
@@ -392,12 +395,12 @@ function resolvePixels(f, value, previous_color, lineNum, xPos) {
 	* The resolution logic depends on a lot of factors.
 	*/
 	if (value == undefined) {
-		value = f.bmhd.transparentColor
+    value = 0
 	}
-	if (f.bmhd.masking == 2 && value == f.bmhd.transparentColor) {
-		// This breaks some images.
-		//return [0, 0, 0, 255]
-	}
+  // by mrupp: 'transparency' and support for iff.masking == 3
+  if (f.transparency && (f.bmhd.masking == 2 || f.bmhd.masking == 3) && value == f.bmhd.transparentColor) {
+    return [0, 0, 0, 255]
+  }
 	if (typeof f.cmap === 'undefined') {
 		/* No color map, must be absolute 24 bits RGB */
 		if (f.bmhd.nPlanes == 24) {
