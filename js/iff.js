@@ -87,7 +87,7 @@ export class IFF {
 				console.log('Not yet supported type: '+ this.subType)
 		}
 
-		this.cbOnLoad()	// we are done.. callback
+		this.cbOnLoad(this)	// we are done.. callback
 	}
 	handleError(msg) {
 		log(msg)

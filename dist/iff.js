@@ -901,12 +901,12 @@ async function initContext(dat) {
 				log('looped: ' + dat.looped + ' of ' + (dat.loops < 0 ? 'infinite (until stop() is called)' : dat.loops));
 				if (dat.loops >= 0 && dat.looped >= dat.loops) {
 					stop(dat);
-					if (dat.cbOnEnd) dat.cbOnEnd();
+					if (dat.cbOnEnd) dat.cbOnEnd(dat);
 				}
 			}
 			else {
 				stop(dat);
-				if (dat.cbOnEnd) dat.cbOnEnd();
+				if (dat.cbOnEnd) dat.cbOnEnd(dat);
 			}
 		}
 	};
@@ -4582,7 +4582,7 @@ class IFF {
 				console.log('Not yet supported type: '+ this.subType);
 		}
 
-		this.cbOnLoad();	// we are done.. callback
+		this.cbOnLoad(this);	// we are done.. callback
 	}
 	handleError(msg) {
 		log(msg);
