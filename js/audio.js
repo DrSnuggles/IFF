@@ -49,12 +49,12 @@ export async function initContext(dat) {
 				log('looped: ' + dat.looped + ' of ' + (dat.loops < 0 ? 'infinite (until stop() is called)' : dat.loops))
 				if (dat.loops >= 0 && dat.looped >= dat.loops) {
 					stop(dat)
-					if (dat.cbOnEnd) dat.cbOnEnd()
+					if (dat.cbOnEnd) dat.cbOnEnd(dat)
 				}
 			}
 			else {
 				stop(dat)
-				if (dat.cbOnEnd) dat.cbOnEnd()
+				if (dat.cbOnEnd) dat.cbOnEnd(dat)
 			}
 		}
 	}
@@ -74,7 +74,8 @@ export function stop(dat) {
 }
 
 export function pause(dat) {
-	if (dat.ctx && dat.ctx.state === 'running') {
+	if (dat.paused) resume(dat)
+	else if (dat.ctx && dat.ctx.state === 'running') {
 		dat.paused = true
 		dat.ctx.suspend()
 	}

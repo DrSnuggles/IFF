@@ -3,7 +3,7 @@
 	https://wiki.amigaos.net/wiki/Preferences#Preference_File_Format
 */
 import {log} from './log.js'
-import {getUint16, getInt16, getUint8, readChunk, processCommonChunks} from './readChunk.js'
+import {getInt16, getUint8, readChunk, processCommonChunks} from './readChunk.js'
 
 export async function parse(dat) {
 	// read next chunk, needs to be PRHD

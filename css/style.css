@@ -3,6 +3,7 @@
   --mainCol: #FFF;
   --darkCol: #002;
   --actCol: #F80;
+  --disCol: #BBB;
 }
 
 body {
@@ -28,6 +29,10 @@ button {
 }
 button:focus{
   outline: 0;
+}
+button:disabled {
+  cursor: default;
+  color: var(--disCol);
 }
 
 #ILBMcanvas {

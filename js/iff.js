@@ -59,6 +59,7 @@ export class IFF {
 
 		switch (this.subType) {
 			case 'ILBM':	// Image
+			case 'PBM ':	// Image
 				//if (typeof parseILBM == 'undefined') window.parseILBM = await import('./ilbm.js')
 				//await parseILBM.parse(this)
 				await parseILBM(this)
@@ -86,7 +87,7 @@ export class IFF {
 				console.log('Not yet supported type: '+ this.subType)
 		}
 
-		this.cbOnLoad()	// we are done.. callback
+		this.cbOnLoad(this)	// we are done.. callback
 	}
 	handleError(msg) {
 		log(msg)
@@ -98,5 +99,15 @@ export class IFF {
 		else console.error(msg)
 	}
 }
+
+// Polyfill for window.requestAnimationFrame
+window.requestAnimFrame = (function (callback) {
+  return window.requestAnimationFrame || window.webkitRequestAnimationFrame ||
+    window.mozRequestAnimationFrame || window.oRequestAnimationFrame ||
+    window.msRequestAnimationFrame ||
+    function (callback) {
+      window.setTimeout(callback, 1000 / 60)
+    }
+})()
 
 window.IFF = IFF	// for easier access
