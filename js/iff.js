@@ -35,6 +35,7 @@ export class IFF {
 	}
 	async parse(ab) {
 		this.dv = new DataView(ab)
+		this.idx = 0
 
 		// detect EA IFF 85 group identifier
 		// If it doesn’t start with “FORM”, “LIST”, or “CAT ”, it’s not an IFF-85 file.

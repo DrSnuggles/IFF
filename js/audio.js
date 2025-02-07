@@ -63,9 +63,26 @@ export async function initContext(dat) {
 export async function play(dat, loops) { // use loops < 0 for infinite looping or until stop() is called
 	dat.loops = loops
 	dat.looped = 0
-	dat.paused = false
 	dat.currentTime = 0
-	dat.aw.port.postMessage({ch:dat.ch})
+
+	if (dat.paused) {
+		setPosition(dat, 0)
+		resume(dat)
+	}
+	else {
+		dat.paused = false
+		if (dat.ctx) {
+			switch(dat.ctx.state) {
+				case 'running':
+					setPosition(dat, 0)
+					break;
+				case 'closed':
+					await initContext(dat)
+					break;
+				}
+		}
+		dat.aw.port.postMessage({ch:dat.ch})
+	}
 }
 
 export function stop(dat) {
